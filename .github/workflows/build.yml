@@ -1,6 +1,25 @@
 name: 'Build (All)'
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      platform_filter:
+        description: 'fnmatch filter for job keys (e.g. msvc-*, msvc-gdk-x64, msys2-*)'
+        required: false
+        default: 'msvc-*'
+        type: string
+      enable_artifacts:
+        description: 'Force artifact upload'
+        required: false
+        default: false
+        type: boolean
+      full_trackmem:
+        description: 'Enable full trackmem symbol names'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -27,8 +46,18 @@ jobs:
           # e.g. [sdl-ci-filter msvc-*]
           EOF=$(openssl rand -hex 32)
           cat >/tmp/commit_message.txt <<$EOF
-          ${{ github.event.head_commit.message }}
+          ${{ github.event.head_commit.message || '' }}
           $EOF
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "[sdl-ci-filter ${{ github.event.inputs.platform_filter || 'msvc-*' }}]" >> /tmp/commit_message.txt
+            if [ "${{ github.event.inputs.enable_artifacts || 'false' }}" = "true" ]; then
+              echo "[sdl-ci-artifacts]" >> /tmp/commit_message.txt
+            fi
+            if [ "${{ github.event.inputs.full_trackmem || 'false' }}" = "true" ]; then
+              echo "[sdl-ci-full-trackmem-symbol-names]" >> /tmp/commit_message.txt
+            fi
+          fi
 
           python .github/workflows/create-test-plan.py \
             --github-variable-prefix platforms \
