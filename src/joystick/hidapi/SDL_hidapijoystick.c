@@ -372,7 +372,10 @@ static SDL_HIDAPI_DeviceDriver *HIDAPI_GetDeviceDriver(SDL_HIDAPI_Device *device
         return NULL;
     }
 
-    if (device->vendor_id != USB_VENDOR_VALVE && device->vendor_id != USB_VENDOR_FLYDIGI_V1 && device->vendor_id != USB_VENDOR_FLYDIGI_V2) {
+    if (device->vendor_id != USB_VENDOR_VALVE &&
+        device->vendor_id != USB_VENDOR_FLYDIGI_V1 &&
+        device->vendor_id != USB_VENDOR_FLYDIGI_V2 &&
+        !(device->vendor_id == USB_VENDOR_BEITONG && device->product_id == USB_PRODUCT_BEITONG_ZEUS2)) {
         if (device->usage_page && device->usage_page != USAGE_PAGE_GENERIC_DESKTOP) {
             return NULL;
         }
