@@ -170,7 +170,7 @@ void HIDAPI_DumpPacket(const char *prefix, const Uint8 *data, int size)
 bool HIDAPI_SupportsPlaystationDetection(Uint16 vendor, Uint16 product)
 {
     if (vendor == USB_VENDOR_BEITONG && product == USB_PRODUCT_BEITONG_ZEUS2) {
-        // This VID overlaps with SHANWAN_ALT and should not go through PlayStation probing.
+        // This device uses a custom HID protocol and shouldn't go through PlayStation probing.
         return false;
     }
 
@@ -223,8 +223,6 @@ bool HIDAPI_SupportsPlaystationDetection(Uint16 vendor, Uint16 product)
          */
         return false;
     case USB_VENDOR_SHANWAN:
-        return true;
-    case USB_VENDOR_SHANWAN_ALT:
         return true;
     case USB_VENDOR_THRUSTMASTER:
         /* Most of these are wheels, don't have the full set of effects, and

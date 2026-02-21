@@ -163,8 +163,7 @@ static bool HIDAPI_DriverPS3_InitDevice(SDL_HIDAPI_Device *device)
         SDL_strncasecmp(device->name, "ShanWan", 7) == 0) {
         is_shanwan = true;
     }
-    if (device->vendor_id == USB_VENDOR_SHANWAN ||
-        device->vendor_id == USB_VENDOR_SHANWAN_ALT) {
+    if (device->vendor_id == USB_VENDOR_SHANWAN) {
         is_shanwan = true;
     }
 
