@@ -46,6 +46,7 @@ typedef struct
     bool sensors_enabled;
     bool last_state_initialized;
     Uint8 last_state[USB_PACKET_LENGTH];
+    Uint8 imu_data_offset;
     Uint64 sensor_timestamp_ns;
     float accel_scale;
     float gyro_scale;
@@ -105,6 +106,7 @@ static bool HIDAPI_DriverBeitong_OpenJoystick(SDL_HIDAPI_Device *device, SDL_Joy
 
     SDL_zeroa(ctx->last_state);
     ctx->last_state_initialized = false;
+    ctx->imu_data_offset = 1;
     ctx->sensor_timestamp_ns = SDL_GetTicksNS();
 
     joystick->nbuttons = SDL_GAMEPAD_BUTTON_COUNT;
@@ -278,17 +280,78 @@ static void HIDAPI_DriverBeitong_HandleButtonPacket(SDL_Joystick *joystick, SDL_
     ctx->last_state_initialized = true;
 }
 
+static bool HIDAPI_DriverBeitong_ReadIMUValues(const Uint8 *data, int size, int base_offset,
+                                                Sint16 *accel_x, Sint16 *accel_y, Sint16 *accel_z,
+                                                Sint16 *gyro_x, Sint16 *gyro_y, Sint16 *gyro_z)
+{
+    if (size < (base_offset + 12)) {
+        return false;
+    }
+
+    *accel_x = LOAD16(data[base_offset + 0], data[base_offset + 1]);
+    *accel_y = LOAD16(data[base_offset + 2], data[base_offset + 3]);
+    *accel_z = LOAD16(data[base_offset + 4], data[base_offset + 5]);
+    *gyro_x = LOAD16(data[base_offset + 6], data[base_offset + 7]);
+    *gyro_y = LOAD16(data[base_offset + 8], data[base_offset + 9]);
+    *gyro_z = LOAD16(data[base_offset + 10], data[base_offset + 11]);
+    return true;
+}
+
 static void HIDAPI_DriverBeitong_HandleIMUPacket(SDL_Joystick *joystick, SDL_DriverBeitong_Context *ctx, const Uint8 *data, int size)
 {
     float values[3];
     Uint64 timestamp;
     Uint64 sensor_timestamp;
+    int imu_data_offset;
+    Sint16 alt_accel_x, alt_accel_y, alt_accel_z;
+    Sint16 alt_gyro_x, alt_gyro_y, alt_gyro_z;
     Sint16 accel_x, accel_y, accel_z;
     Sint16 gyro_x, gyro_y, gyro_z;
 
-    if (!ctx->sensors_enabled || size < 13) {
+    if (!ctx->sensors_enabled) {
         return;
     }
+
+    imu_data_offset = ctx->imu_data_offset ? ctx->imu_data_offset : 1;
+
+    /* Some stacks prepend an extra IMU marker byte; keep handling both layouts. */
+    if (size >= 14 && data[1] == BEITONG_INPUT_REPORT_IMU) {
+        imu_data_offset = 2;
+    }
+
+    if (!HIDAPI_DriverBeitong_ReadIMUValues(data, size, imu_data_offset,
+                                            &accel_x, &accel_y, &accel_z,
+                                            &gyro_x, &gyro_y, &gyro_z)) {
+        if (imu_data_offset != 1 &&
+            HIDAPI_DriverBeitong_ReadIMUValues(data, size, 1,
+                                               &accel_x, &accel_y, &accel_z,
+                                               &gyro_x, &gyro_y, &gyro_z)) {
+            imu_data_offset = 1;
+        } else {
+            return;
+        }
+    }
+
+    /* If the currently selected layout decodes as all-zero but the alternate layout
+     * has non-zero data, switch to it and remember that offset.
+     */
+    if ((accel_x | accel_y | accel_z | gyro_x | gyro_y | gyro_z) == 0 && size >= 14) {
+        const int alt_offset = (imu_data_offset == 1) ? 2 : 1;
+        if (HIDAPI_DriverBeitong_ReadIMUValues(data, size, alt_offset,
+                                               &alt_accel_x, &alt_accel_y, &alt_accel_z,
+                                               &alt_gyro_x, &alt_gyro_y, &alt_gyro_z) &&
+            (alt_accel_x | alt_accel_y | alt_accel_z | alt_gyro_x | alt_gyro_y | alt_gyro_z) != 0) {
+            accel_x = alt_accel_x;
+            accel_y = alt_accel_y;
+            accel_z = alt_accel_z;
+            gyro_x = alt_gyro_x;
+            gyro_y = alt_gyro_y;
+            gyro_z = alt_gyro_z;
+            imu_data_offset = alt_offset;
+        }
+    }
+
+    ctx->imu_data_offset = (Uint8)imu_data_offset;
 
     timestamp = SDL_GetTicksNS();
     sensor_timestamp = ctx->sensor_timestamp_ns;
@@ -296,13 +359,6 @@ static void HIDAPI_DriverBeitong_HandleIMUPacket(SDL_Joystick *joystick, SDL_Dri
         sensor_timestamp = timestamp;
     }
     ctx->sensor_timestamp_ns = timestamp;
-
-    accel_x = LOAD16(data[1], data[2]);
-    accel_y = LOAD16(data[3], data[4]);
-    accel_z = LOAD16(data[5], data[6]);
-    gyro_x = LOAD16(data[7], data[8]);
-    gyro_y = LOAD16(data[9], data[10]);
-    gyro_z = LOAD16(data[11], data[12]);
 
     values[0] = (float)accel_x * ctx->accel_scale;
     values[1] = (float)accel_y * ctx->accel_scale;
