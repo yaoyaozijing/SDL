@@ -99,6 +99,7 @@ static void HIDAPI_DriverBeitong_SetDevicePlayerIndex(SDL_HIDAPI_Device *device,
 static bool HIDAPI_DriverBeitong_OpenJoystick(SDL_HIDAPI_Device *device, SDL_Joystick *joystick)
 {
     SDL_DriverBeitong_Context *ctx = (SDL_DriverBeitong_Context *)device->context;
+    int i;
 
     SDL_AssertJoysticksLocked();
 
@@ -112,6 +113,15 @@ static bool HIDAPI_DriverBeitong_OpenJoystick(SDL_HIDAPI_Device *device, SDL_Joy
 
     SDL_PrivateJoystickAddSensor(joystick, SDL_SENSOR_GYRO, BEITONG_IMU_RATE_HZ);
     SDL_PrivateJoystickAddSensor(joystick, SDL_SENSOR_ACCEL, BEITONG_IMU_RATE_HZ);
+
+    /* Beitong streams IMU continuously; enable sensors by default so data is available
+     * without requiring an explicit API call from applications.
+     */
+    ctx->sensors_enabled = true;
+    joystick->nsensors_enabled = joystick->nsensors;
+    for (i = 0; i < joystick->nsensors; ++i) {
+        joystick->sensors[i].enabled = true;
+    }
 
     return true;
 }
