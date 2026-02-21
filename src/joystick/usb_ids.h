@@ -30,6 +30,7 @@
 #define USB_VENDOR_ASTRO        0x9886
 #define USB_VENDOR_ASUS         0x0b05
 #define USB_VENDOR_BACKBONE     0x358a
+#define USB_VENDOR_BEITONG      0x20bc
 #define USB_VENDOR_GAMESIR      0x3537
 #define USB_VENDOR_DRAGONRISE   0x0079
 #define USB_VENDOR_FLYDIGI_V1   0x04b4
@@ -75,6 +76,7 @@
 #define USB_PRODUCT_ASTRO_C40_XBOX360                     0x0024
 #define USB_PRODUCT_BACKBONE_ONE_IOS                      0x0103
 #define USB_PRODUCT_BACKBONE_ONE_IOS_PS5                  0x0104
+#define USB_PRODUCT_BEITONG_ZEUS2                         0x5076
 #define USB_PRODUCT_BDA_XB1_CLASSIC                       0x581a
 #define USB_PRODUCT_BDA_XB1_FIGHTPAD                      0x791a
 #define USB_PRODUCT_BDA_XB1_SPECTRA_PRO                   0x592a
