@@ -169,6 +169,11 @@ void HIDAPI_DumpPacket(const char *prefix, const Uint8 *data, int size)
 
 bool HIDAPI_SupportsPlaystationDetection(Uint16 vendor, Uint16 product)
 {
+    if (vendor == USB_VENDOR_BEITONG && product == USB_PRODUCT_BEITONG_ZEUS2) {
+        // This VID overlaps with SHANWAN_ALT and should not go through PlayStation probing.
+        return false;
+    }
+
     /* If we already know the controller is a different type, don't try to detect it.
      * This fixes a hang with the HORIPAD for Nintendo Switch (0x0f0d/0x00c1)
      */
