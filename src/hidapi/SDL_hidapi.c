@@ -32,6 +32,7 @@
 
 #include "SDL_hidapi_c.h"
 #include "../joystick/usb_ids.h"
+#include "../joystick/hidapi/SDL_hidapi_simple_profile.h"
 #include "../joystick/SDL_joystick_c.h"
 #include "../SDL_hints_c.h"
 
@@ -1039,24 +1040,9 @@ static int SDL_hidapi_refcount = 0;
 static bool SDL_hidapi_only_controllers;
 static char *SDL_hidapi_ignored_devices = NULL;
 
-static bool HIDAPI_IsZhidongDevice(Uint16 vendor_id, Uint16 product_id)
+static bool HIDAPI_IsSimpleProfiledDevice(Uint16 vendor_id, Uint16 product_id)
 {
-    if ((vendor_id == USB_VENDOR_ZHIDONG_USB_XINPUT && product_id == USB_PRODUCT_ZHIDONG_USB_XINPUT) ||
-        (vendor_id == USB_VENDOR_ZHIDONG_USB_DINPUT && product_id == USB_PRODUCT_ZHIDONG_USB_DINPUT) ||
-        (vendor_id == USB_VENDOR_ZHIDONG_24G && product_id == USB_PRODUCT_ZHIDONG_24G_XINPUT) ||
-        (vendor_id == USB_VENDOR_ZHIDONG_24G && product_id == USB_PRODUCT_ZHIDONG_24G_DINPUT)) {
-        return true;
-    }
-
-    // Accept swapped PID/VID pairs too.
-    if ((vendor_id == USB_PRODUCT_ZHIDONG_USB_XINPUT && product_id == USB_VENDOR_ZHIDONG_USB_XINPUT) ||
-        (vendor_id == USB_PRODUCT_ZHIDONG_USB_DINPUT && product_id == USB_VENDOR_ZHIDONG_USB_DINPUT) ||
-        (vendor_id == USB_PRODUCT_ZHIDONG_24G_XINPUT && product_id == USB_VENDOR_ZHIDONG_24G) ||
-        (vendor_id == USB_PRODUCT_ZHIDONG_24G_DINPUT && product_id == USB_VENDOR_ZHIDONG_24G)) {
-        return true;
-    }
-
-    return false;
+    return HIDAPI_Simple_IsSupportedVIDPID(vendor_id, product_id);
 }
 
 static void SDLCALL OnlyControllersChanged(void *userdata, const char *name, const char *oldValue, const char *hint)
@@ -1117,7 +1103,7 @@ bool SDL_HIDAPI_ShouldIgnoreDevice(int bus, Uint16 vendor_id, Uint16 product_id,
             }
             return true;
         } else if ((vendor_id == USB_VENDOR_BEITONG && product_id == USB_PRODUCT_BEITONG_ZEUS2) ||
-                   HIDAPI_IsZhidongDevice(vendor_id, product_id)) {
+                   HIDAPI_IsSimpleProfiledDevice(vendor_id, product_id)) {
             if (usage_page == USB_USAGEPAGE_GENERIC_DESKTOP &&
                 (usage == USB_USAGE_GENERIC_KEYBOARD || usage == USB_USAGE_GENERIC_MOUSE)) {
                 return true;

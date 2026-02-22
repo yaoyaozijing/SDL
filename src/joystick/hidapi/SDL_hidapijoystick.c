@@ -24,6 +24,7 @@
 
 #include "../SDL_sysjoystick.h"
 #include "SDL_hidapijoystick_c.h"
+#include "SDL_hidapi_simple_profile.h"
 #include "SDL_hidapi_rumble.h"
 #include "../../SDL_hints_c.h"
 
@@ -112,8 +113,8 @@ static SDL_HIDAPI_DeviceDriver *SDL_HIDAPI_drivers[] = {
 #ifdef SDL_JOYSTICK_HIDAPI_BEITONG
     &SDL_HIDAPI_DriverBeitong,
 #endif
-#ifdef SDL_JOYSTICK_HIDAPI_ZHIDONG
-    &SDL_HIDAPI_DriverZhidong,
+#ifdef SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE
+    &SDL_HIDAPI_DriverSimpleProfile,
 #endif
 #ifdef SDL_JOYSTICK_HIDAPI_ZUIKI
     &SDL_HIDAPI_DriverZUIKI,
@@ -170,30 +171,15 @@ void HIDAPI_DumpPacket(const char *prefix, const Uint8 *data, int size)
     SDL_free(buffer);
 }
 
-static bool HIDAPI_IsZhidongDevice(Uint16 vendor, Uint16 product)
+static bool HIDAPI_IsSimpleProfiledDevice(Uint16 vendor, Uint16 product)
 {
-    if ((vendor == USB_VENDOR_ZHIDONG_USB_XINPUT && product == USB_PRODUCT_ZHIDONG_USB_XINPUT) ||
-        (vendor == USB_VENDOR_ZHIDONG_USB_DINPUT && product == USB_PRODUCT_ZHIDONG_USB_DINPUT) ||
-        (vendor == USB_VENDOR_ZHIDONG_24G && product == USB_PRODUCT_ZHIDONG_24G_XINPUT) ||
-        (vendor == USB_VENDOR_ZHIDONG_24G && product == USB_PRODUCT_ZHIDONG_24G_DINPUT)) {
-        return true;
-    }
-
-    // Accept swapped PID/VID pairs too.
-    if ((vendor == USB_PRODUCT_ZHIDONG_USB_XINPUT && product == USB_VENDOR_ZHIDONG_USB_XINPUT) ||
-        (vendor == USB_PRODUCT_ZHIDONG_USB_DINPUT && product == USB_VENDOR_ZHIDONG_USB_DINPUT) ||
-        (vendor == USB_PRODUCT_ZHIDONG_24G_XINPUT && product == USB_VENDOR_ZHIDONG_24G) ||
-        (vendor == USB_PRODUCT_ZHIDONG_24G_DINPUT && product == USB_VENDOR_ZHIDONG_24G)) {
-        return true;
-    }
-
-    return false;
+    return HIDAPI_Simple_IsSupportedVIDPID(vendor, product);
 }
 
 bool HIDAPI_SupportsPlaystationDetection(Uint16 vendor, Uint16 product)
 {
     if ((vendor == USB_VENDOR_BEITONG && product == USB_PRODUCT_BEITONG_ZEUS2) ||
-        HIDAPI_IsZhidongDevice(vendor, product)) {
+        HIDAPI_IsSimpleProfiledDevice(vendor, product)) {
         // This device uses a custom HID protocol and shouldn't go through PlayStation probing.
         return false;
     }
@@ -403,7 +389,7 @@ static SDL_HIDAPI_DeviceDriver *HIDAPI_GetDeviceDriver(SDL_HIDAPI_Device *device
         device->vendor_id != USB_VENDOR_FLYDIGI_V1 &&
         device->vendor_id != USB_VENDOR_FLYDIGI_V2 &&
         !(device->vendor_id == USB_VENDOR_BEITONG && device->product_id == USB_PRODUCT_BEITONG_ZEUS2) &&
-        !HIDAPI_IsZhidongDevice(device->vendor_id, device->product_id)) {
+        !HIDAPI_IsSimpleProfiledDevice(device->vendor_id, device->product_id)) {
         if (device->usage_page && device->usage_page != USAGE_PAGE_GENERIC_DESKTOP) {
             return NULL;
         }

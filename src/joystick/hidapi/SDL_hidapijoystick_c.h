@@ -49,7 +49,7 @@
 #define SDL_JOYSTICK_HIDAPI_FLYDIGI
 #define SDL_JOYSTICK_HIDAPI_GAMESIR
 #define SDL_JOYSTICK_HIDAPI_BEITONG
-#define SDL_JOYSTICK_HIDAPI_ZHIDONG
+#define SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE
 #define SDL_JOYSTICK_HIDAPI_GIP
 #define SDL_JOYSTICK_HIDAPI_SINPUT
 #define SDL_JOYSTICK_HIDAPI_ZUIKI
@@ -174,7 +174,7 @@ extern SDL_HIDAPI_DeviceDriver SDL_HIDAPI_Driver8BitDo;
 extern SDL_HIDAPI_DeviceDriver SDL_HIDAPI_DriverFlydigi;
 extern SDL_HIDAPI_DeviceDriver SDL_HIDAPI_DriverGameSir;
 extern SDL_HIDAPI_DeviceDriver SDL_HIDAPI_DriverBeitong;
-extern SDL_HIDAPI_DeviceDriver SDL_HIDAPI_DriverZhidong;
+extern SDL_HIDAPI_DeviceDriver SDL_HIDAPI_DriverSimpleProfile;
 extern SDL_HIDAPI_DeviceDriver SDL_HIDAPI_DriverSInput;
 extern SDL_HIDAPI_DeviceDriver SDL_HIDAPI_DriverZUIKI;
 

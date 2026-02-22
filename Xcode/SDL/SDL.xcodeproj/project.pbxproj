@@ -558,7 +558,7 @@
 		F3FBB1082DDF93AB0000F99F /* SDL_hidapi_flydigi.c in Sources */ = {isa = PBXBuildFile; fileRef = F3395BA72D9A5971007246C9 /* SDL_hidapi_flydigi.c */; };
 		F3FBB10A2DDF93AB0000F9A0 /* SDL_hidapi_gamesir.c in Sources */ = {isa = PBXBuildFile; fileRef = F3FBB1092DDF93AB0000F9A0 /* SDL_hidapi_gamesir.c */; };
 		F36E5B7E2F0A4C9100B17001 /* SDL_hidapi_beitong.c in Sources */ = {isa = PBXBuildFile; fileRef = F36E5B7D2F0A4C9100B17001 /* SDL_hidapi_beitong.c */; };
-		F36E5B812F0A4C9100B17001 /* SDL_hidapi_zhidong.c in Sources */ = {isa = PBXBuildFile; fileRef = F36E5B802F0A4C9100B17001 /* SDL_hidapi_zhidong.c */; };
+		F36E5B812F0A4C9100B17001 /* SDL_hidapi_simple_profile.c in Sources */ = {isa = PBXBuildFile; fileRef = F36E5B802F0A4C9100B17001 /* SDL_hidapi_simple_profile.c */; };
 		F3FD042E2C9B755700824C4C /* SDL_hidapi_nintendo.h in Headers */ = {isa = PBXBuildFile; fileRef = F3FD042C2C9B755700824C4C /* SDL_hidapi_nintendo.h */; };
 		F3FD042F2C9B755700824C4C /* SDL_hidapi_steam_hori.c in Sources */ = {isa = PBXBuildFile; fileRef = F3FD042D2C9B755700824C4C /* SDL_hidapi_steam_hori.c */; };
 		FA73671D19A540EF004122E4 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA73671C19A540EF004122E4 /* CoreVideo.framework */; platformFilters = (ios, maccatalyst, macos, tvos, ); settings = {ATTRIBUTES = (Required, ); }; };
@@ -974,7 +974,7 @@
 		F3395BA72D9A5971007246C9 /* SDL_hidapi_flydigi.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SDL_hidapi_flydigi.c; sourceTree = "<group>"; };
 		F3FBB1092DDF93AB0000F9A0 /* SDL_hidapi_gamesir.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SDL_hidapi_gamesir.c; sourceTree = "<group>"; };
 		F36E5B7D2F0A4C9100B17001 /* SDL_hidapi_beitong.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SDL_hidapi_beitong.c; sourceTree = "<group>"; };
-		F36E5B802F0A4C9100B17001 /* SDL_hidapi_zhidong.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SDL_hidapi_zhidong.c; sourceTree = "<group>"; };
+		F36E5B802F0A4C9100B17001 /* SDL_hidapi_simple_profile.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SDL_hidapi_simple_profile.c; sourceTree = "<group>"; };
 		F344003C2D4022E1003F26D7 /* INSTALL.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = INSTALL.md; sourceTree = "<group>"; };
 		F362B9152B3349E200D30B94 /* controller_list.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = controller_list.h; sourceTree = "<group>"; };
 		F362B9162B3349E200D30B94 /* SDL_gamepad_c.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDL_gamepad_c.h; sourceTree = "<group>"; };
@@ -1974,7 +1974,7 @@
 				F3395BA72D9A5971007246C9 /* SDL_hidapi_flydigi.c */,
 				F3FBB1092DDF93AB0000F9A0 /* SDL_hidapi_gamesir.c */,
 				F36E5B7D2F0A4C9100B17001 /* SDL_hidapi_beitong.c */,
-				F36E5B802F0A4C9100B17001 /* SDL_hidapi_zhidong.c */,
+				F36E5B802F0A4C9100B17001 /* SDL_hidapi_simple_profile.c */,
 				A7D8A7C923E2513E00DCD162 /* SDL_hidapi_gamecube.c */,
 				F3B6B8092DC3EA54004954FD /* SDL_hidapi_gip.c */,
 				89E5801D2D03602200DAF6D3 /* SDL_hidapi_lg4ff.c */,
@@ -3161,7 +3161,7 @@
 				F3FBB1082DDF93AB0000F99F /* SDL_hidapi_flydigi.c in Sources */,
 				F3FBB10A2DDF93AB0000F9A0 /* SDL_hidapi_gamesir.c in Sources */,
 				F36E5B7E2F0A4C9100B17001 /* SDL_hidapi_beitong.c in Sources */,
-				F36E5B812F0A4C9100B17001 /* SDL_hidapi_zhidong.c in Sources */,
+				F36E5B812F0A4C9100B17001 /* SDL_hidapi_simple_profile.c in Sources */,
 				0000481D255AF155B42C0000 /* SDL_sysfsops.c in Sources */,
 				0000494CC93F3E624D3C0000 /* SDL_systime.c in Sources */,
 				000095FA1BDE436CF3AF0000 /* SDL_time.c in Sources */,

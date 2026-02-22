@@ -370,8 +370,8 @@ static void HIDAPI_DriverBeitong_HandleIMUPacket(SDL_Joystick *joystick, SDL_Dri
         return;
     }
 
-    /* Strictly follow Beitong reference:
-     * byte[0] is report header, accel at byte[1..6], gyro at byte[7..12].
+    /* Observed Beitong packet layout:
+     * byte[0] is report header, gyro at byte[1..6], accel at byte[7..12].
      */
     if (size < 13) {
         return;
