@@ -260,10 +260,7 @@ static void HIDAPI_DriverZhidong_HandleStatePacket(SDL_Joystick *joystick, SDL_D
         SDL_SendJoystickAxis(timestamp, joystick, SDL_GAMEPAD_AXIS_LEFTX, axis);
     }
     if (initial || last[7] != data[7]) {
-        axis = -READ_STICK_AXIS(7);
-        if (axis <= SDL_MIN_SINT16) {
-            axis = SDL_MAX_SINT16;
-        }
+        axis = READ_STICK_AXIS(7);
         SDL_SendJoystickAxis(timestamp, joystick, SDL_GAMEPAD_AXIS_LEFTY, axis);
     }
     if (initial || last[8] != data[8]) {
@@ -271,10 +268,7 @@ static void HIDAPI_DriverZhidong_HandleStatePacket(SDL_Joystick *joystick, SDL_D
         SDL_SendJoystickAxis(timestamp, joystick, SDL_GAMEPAD_AXIS_RIGHTX, axis);
     }
     if (initial || last[9] != data[9]) {
-        axis = -READ_STICK_AXIS(9);
-        if (axis <= SDL_MIN_SINT16) {
-            axis = SDL_MAX_SINT16;
-        }
+        axis = READ_STICK_AXIS(9);
         SDL_SendJoystickAxis(timestamp, joystick, SDL_GAMEPAD_AXIS_RIGHTY, axis);
     }
 #undef READ_STICK_AXIS
