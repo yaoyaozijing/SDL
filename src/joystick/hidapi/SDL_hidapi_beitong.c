@@ -36,9 +36,8 @@
 #define DEG2RAD(x) ((float)(x) * (float)(SDL_PI_F / 180.0f))
 #endif
 
-#define BEITONG_USAGE_PAGE_VENDOR    0xFF00
-#define BEITONG_USAGE_BUTTONS        0x0001
-#define BEITONG_USAGE_IMU            0x0003
+#define BEITONG_COLLECTION_BUTTONS   4
+#define BEITONG_COLLECTION_IMU       5
 
 #define BEITONG_IMU_RATE_HZ          500.0f
 
@@ -68,6 +67,23 @@ static bool HIDAPI_DriverBeitong_IsEnabled(void)
     return SDL_GetHintBoolean(SDL_HINT_JOYSTICK_HIDAPI_BEITONG, SDL_GetHintBoolean(SDL_HINT_JOYSTICK_HIDAPI, SDL_HIDAPI_DEFAULT));
 }
 
+static bool HIDAPI_DriverBeitong_PathHasCollection(const char *path, int collection)
+{
+#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_GDK)
+    char col_marker[8];
+
+    if (!path) {
+        return false;
+    }
+    SDL_snprintf(col_marker, sizeof(col_marker), "col%02d", collection);
+    return (SDL_strcasestr(path, col_marker) != NULL);
+#else
+    (void)path;
+    (void)collection;
+    return false;
+#endif
+}
+
 static bool HIDAPI_DriverBeitong_IsSupportedDevice(SDL_HIDAPI_Device *device, const char *name, SDL_GamepadType type, Uint16 vendor_id, Uint16 product_id, Uint16 version, int interface_number, int interface_class, int interface_subclass, int interface_protocol)
 {
     if (vendor_id != USB_VENDOR_BEITONG || product_id != USB_PRODUCT_BEITONG_ZEUS2) {
@@ -78,13 +94,14 @@ static bool HIDAPI_DriverBeitong_IsSupportedDevice(SDL_HIDAPI_Device *device, co
         return true;
     }
 
-    /* On Windows this controller usually exposes U:0001 (buttons/axes) and U:0003 (IMU).
-     * Claim only U:0001 as the primary joystick and read U:0003 from a secondary handle.
+    /* On Windows this controller exposes separate HID collections.
+     * Bind only Col04 as primary and read Col05 via secondary handle.
      */
-    if (device->usage_page == BEITONG_USAGE_PAGE_VENDOR) {
-        return (device->usage == BEITONG_USAGE_BUTTONS);
-    }
+#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_GDK)
+    return HIDAPI_DriverBeitong_PathHasCollection(device->path, BEITONG_COLLECTION_BUTTONS);
+#else
     return true;
+#endif
 }
 
 static bool HIDAPI_DriverBeitong_MatchCollectionPath(const char *a, const char *b)
@@ -111,7 +128,7 @@ static SDL_hid_device *HIDAPI_DriverBeitong_OpenIMUHandle(SDL_HIDAPI_Device *dev
     if (!device->path) {
         return NULL;
     }
-    if (!(device->usage_page == BEITONG_USAGE_PAGE_VENDOR && device->usage == BEITONG_USAGE_BUTTONS)) {
+    if (!HIDAPI_DriverBeitong_PathHasCollection(device->path, BEITONG_COLLECTION_BUTTONS)) {
         return NULL;
     }
 
@@ -120,7 +137,7 @@ static SDL_hid_device *HIDAPI_DriverBeitong_OpenIMUHandle(SDL_HIDAPI_Device *dev
         if (!info->path) {
             continue;
         }
-        if (info->usage_page != BEITONG_USAGE_PAGE_VENDOR || info->usage != BEITONG_USAGE_IMU) {
+        if (!HIDAPI_DriverBeitong_PathHasCollection(info->path, BEITONG_COLLECTION_IMU)) {
             continue;
         }
         if (HIDAPI_DriverBeitong_MatchCollectionPath(device->path, info->path)) {
@@ -164,6 +181,7 @@ static void HIDAPI_DriverBeitong_SetDevicePlayerIndex(SDL_HIDAPI_Device *device,
 static bool HIDAPI_DriverBeitong_OpenJoystick(SDL_HIDAPI_Device *device, SDL_Joystick *joystick)
 {
     SDL_DriverBeitong_Context *ctx = (SDL_DriverBeitong_Context *)device->context;
+    int i;
 
     SDL_AssertJoysticksLocked();
 
@@ -177,6 +195,13 @@ static bool HIDAPI_DriverBeitong_OpenJoystick(SDL_HIDAPI_Device *device, SDL_Joy
 
     SDL_PrivateJoystickAddSensor(joystick, SDL_SENSOR_GYRO, BEITONG_IMU_RATE_HZ);
     SDL_PrivateJoystickAddSensor(joystick, SDL_SENSOR_ACCEL, BEITONG_IMU_RATE_HZ);
+
+    /* Keep sensor stream active by default so test tools can read data immediately. */
+    ctx->sensors_enabled = true;
+    joystick->nsensors_enabled = joystick->nsensors;
+    for (i = 0; i < joystick->nsensors; ++i) {
+        joystick->sensors[i].enabled = true;
+    }
 
     return true;
 }
@@ -345,7 +370,10 @@ static void HIDAPI_DriverBeitong_HandleIMUPacket(SDL_Joystick *joystick, SDL_Dri
         return;
     }
 
-    if (size < 12) {
+    /* Strictly follow Beitong reference:
+     * byte[0] is report header, accel at byte[1..6], gyro at byte[7..12].
+     */
+    if (size < 13) {
         return;
     }
 
@@ -356,12 +384,12 @@ static void HIDAPI_DriverBeitong_HandleIMUPacket(SDL_Joystick *joystick, SDL_Dri
     }
     ctx->sensor_timestamp_ns = timestamp;
 
-    gyro_x = LOAD16(data[0], data[1]);
-    gyro_y = LOAD16(data[2], data[3]);
-    gyro_z = LOAD16(data[4], data[5]);
-    accel_x = LOAD16(data[6], data[7]);
-    accel_y = LOAD16(data[8], data[9]);
-    accel_z = LOAD16(data[10], data[11]);
+    gyro_x = LOAD16(data[1], data[2]);
+    gyro_y = LOAD16(data[3], data[4]);
+    gyro_z = LOAD16(data[5], data[6]);
+    accel_x = LOAD16(data[7], data[8]);
+    accel_y = LOAD16(data[9], data[10]);
+    accel_z = LOAD16(data[11], data[12]);
 
     values[0] = (float)accel_x * ctx->accel_scale;
     values[1] = (float)accel_y * ctx->accel_scale;
@@ -374,40 +402,11 @@ static void HIDAPI_DriverBeitong_HandleIMUPacket(SDL_Joystick *joystick, SDL_Dri
     SDL_SendJoystickSensor(timestamp, joystick, SDL_SENSOR_GYRO, sensor_timestamp, values, 3);
 }
 
-static void HIDAPI_DriverBeitong_HandlePacket(SDL_Joystick *joystick, SDL_DriverBeitong_Context *ctx, const Uint8 *data, int size, Uint16 usage)
-{
-    const Uint8 *payload;
-    int payload_size;
-
-    if (size <= 1) {
-        return;
-    }
-
-    /* Beitong collections carry a leading report byte; use byte+1 for all fields. */
-    payload = data + 1;
-    payload_size = size - 1;
-
-    if (usage == BEITONG_USAGE_IMU) {
-        HIDAPI_DriverBeitong_HandleIMUPacket(joystick, ctx, payload, payload_size);
-        return;
-    }
-
-    if (usage == BEITONG_USAGE_BUTTONS ||
-        usage == USB_USAGE_GENERIC_GAMEPAD ||
-        usage == USB_USAGE_GENERIC_JOYSTICK ||
-        usage == USB_USAGE_GENERIC_MULTIAXISCONTROLLER ||
-        usage == 0) {
-        HIDAPI_DriverBeitong_HandleButtonPacket(joystick, ctx, payload, payload_size);
-        return;
-    }
-}
-
 static bool HIDAPI_DriverBeitong_UpdateDevice(SDL_HIDAPI_Device *device)
 {
     SDL_DriverBeitong_Context *ctx = (SDL_DriverBeitong_Context *)device->context;
     SDL_Joystick *joystick = NULL;
     Uint8 data[USB_PACKET_LENGTH];
-    Uint16 usage = device->usage;
     int size = 0;
     int imu_size = 0;
 
@@ -422,7 +421,7 @@ static bool HIDAPI_DriverBeitong_UpdateDevice(SDL_HIDAPI_Device *device)
         if (!joystick) {
             continue;
         }
-        HIDAPI_DriverBeitong_HandlePacket(joystick, ctx, data, size, usage);
+        HIDAPI_DriverBeitong_HandleButtonPacket(joystick, ctx, data, size);
     }
 
     if (ctx->imu_dev && joystick) {
@@ -430,7 +429,7 @@ static bool HIDAPI_DriverBeitong_UpdateDevice(SDL_HIDAPI_Device *device)
 #ifdef DEBUG_BEITONG_PROTOCOL
             HIDAPI_DumpPacket("Beitong IMU packet: size = %d", data, imu_size);
 #endif
-            HIDAPI_DriverBeitong_HandlePacket(joystick, ctx, data, imu_size, BEITONG_USAGE_IMU);
+            HIDAPI_DriverBeitong_HandleIMUPacket(joystick, ctx, data, imu_size);
         }
         if (imu_size < 0) {
             SDL_hid_close(ctx->imu_dev);
