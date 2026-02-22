@@ -1039,6 +1039,26 @@ static int SDL_hidapi_refcount = 0;
 static bool SDL_hidapi_only_controllers;
 static char *SDL_hidapi_ignored_devices = NULL;
 
+static bool HIDAPI_IsZhidongDevice(Uint16 vendor_id, Uint16 product_id)
+{
+    if ((vendor_id == USB_VENDOR_ZHIDONG_USB_XINPUT && product_id == USB_PRODUCT_ZHIDONG_USB_XINPUT) ||
+        (vendor_id == USB_VENDOR_ZHIDONG_USB_DINPUT && product_id == USB_PRODUCT_ZHIDONG_USB_DINPUT) ||
+        (vendor_id == USB_VENDOR_ZHIDONG_24G && product_id == USB_PRODUCT_ZHIDONG_24G_XINPUT) ||
+        (vendor_id == USB_VENDOR_ZHIDONG_24G && product_id == USB_PRODUCT_ZHIDONG_24G_DINPUT)) {
+        return true;
+    }
+
+    // Accept swapped PID/VID pairs too.
+    if ((vendor_id == USB_PRODUCT_ZHIDONG_USB_XINPUT && product_id == USB_VENDOR_ZHIDONG_USB_XINPUT) ||
+        (vendor_id == USB_PRODUCT_ZHIDONG_USB_DINPUT && product_id == USB_VENDOR_ZHIDONG_USB_DINPUT) ||
+        (vendor_id == USB_PRODUCT_ZHIDONG_24G_XINPUT && product_id == USB_VENDOR_ZHIDONG_24G) ||
+        (vendor_id == USB_PRODUCT_ZHIDONG_24G_DINPUT && product_id == USB_VENDOR_ZHIDONG_24G)) {
+        return true;
+    }
+
+    return false;
+}
+
 static void SDLCALL OnlyControllersChanged(void *userdata, const char *name, const char *oldValue, const char *hint)
 {
     SDL_hidapi_only_controllers = SDL_GetStringBoolean(hint, true);
@@ -1096,7 +1116,8 @@ bool SDL_HIDAPI_ShouldIgnoreDevice(int bus, Uint16 vendor_id, Uint16 product_id,
                 return false;
             }
             return true;
-        } else if (vendor_id == USB_VENDOR_BEITONG && product_id == USB_PRODUCT_BEITONG_ZEUS2) {
+        } else if ((vendor_id == USB_VENDOR_BEITONG && product_id == USB_PRODUCT_BEITONG_ZEUS2) ||
+                   HIDAPI_IsZhidongDevice(vendor_id, product_id)) {
             if (usage_page == USB_USAGEPAGE_GENERIC_DESKTOP &&
                 (usage == USB_USAGE_GENERIC_KEYBOARD || usage == USB_USAGE_GENERIC_MOUSE)) {
                 return true;

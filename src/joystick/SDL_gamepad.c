@@ -1072,6 +1072,26 @@ static void SDL_CreateMappingStringForSInputGamepad(Uint16 vendor, Uint16 produc
     SDL_SInputStylesMapExtraction(&decoded, mapping_string, mapping_string_len);
 }
 
+static bool SDL_IsJoystickZhidongController(Uint16 vendor, Uint16 product)
+{
+    if ((vendor == USB_VENDOR_ZHIDONG_USB_XINPUT && product == USB_PRODUCT_ZHIDONG_USB_XINPUT) ||
+        (vendor == USB_VENDOR_ZHIDONG_USB_DINPUT && product == USB_PRODUCT_ZHIDONG_USB_DINPUT) ||
+        (vendor == USB_VENDOR_ZHIDONG_24G && product == USB_PRODUCT_ZHIDONG_24G_XINPUT) ||
+        (vendor == USB_VENDOR_ZHIDONG_24G && product == USB_PRODUCT_ZHIDONG_24G_DINPUT)) {
+        return true;
+    }
+
+    // Accept swapped PID/VID pairs too.
+    if ((vendor == USB_PRODUCT_ZHIDONG_USB_XINPUT && product == USB_VENDOR_ZHIDONG_USB_XINPUT) ||
+        (vendor == USB_PRODUCT_ZHIDONG_USB_DINPUT && product == USB_VENDOR_ZHIDONG_USB_DINPUT) ||
+        (vendor == USB_PRODUCT_ZHIDONG_24G_XINPUT && product == USB_VENDOR_ZHIDONG_24G) ||
+        (vendor == USB_PRODUCT_ZHIDONG_24G_DINPUT && product == USB_VENDOR_ZHIDONG_24G)) {
+        return true;
+    }
+
+    return false;
+}
+
 /*
  * Helper function to guess at a mapping for HIDAPI gamepads
  */
@@ -1271,6 +1291,8 @@ static GamepadMapping_t *SDL_CreateMappingForHIDAPIGamepad(SDL_GUID guid)
             SDL_strlcat(mapping_string, "paddle1:b11,paddle2:b12,paddle3:b13,paddle4:b14,misc2:b15,misc3:b16,", sizeof(mapping_string));
         } else if (vendor == USB_VENDOR_BEITONG && product == USB_PRODUCT_BEITONG_ZEUS2) {
             SDL_strlcat(mapping_string, "paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", sizeof(mapping_string));
+        } else if (SDL_IsJoystickZhidongController(vendor, product)) {
+            SDL_strlcat(mapping_string, "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", sizeof(mapping_string));
         } else if (vendor == USB_VENDOR_8BITDO && product == USB_PRODUCT_8BITDO_ULTIMATE2_WIRELESS) {
             SDL_strlcat(mapping_string, "paddle1:b12,paddle2:b11,paddle3:b14,paddle4:b13,", sizeof(mapping_string));
         } else {
