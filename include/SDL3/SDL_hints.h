@@ -1496,6 +1496,68 @@ extern "C" {
 #define SDL_HINT_JOYSTICK_HIDAPI_COMBINE_JOY_CONS "SDL_JOYSTICK_HIDAPI_COMBINE_JOY_CONS"
 
 /**
+ * A variable controlling whether the HIDAPI simple profile driver should be used.
+ *
+ * The variable can be set to the following values:
+ *
+ * - "0": HIDAPI simple profile driver is not used.
+ * - "1": HIDAPI simple profile driver is used.
+ *
+ * The default is the value of SDL_HINT_JOYSTICK_HIDAPI.
+ *
+ * This hint should be set before initializing joysticks and gamepads.
+ *
+ * \since This hint is available since SDL 3.2.0.
+ */
+#define SDL_HINT_JOYSTICK_HIDAPI_SIMPLE_PROFILE "SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE"
+
+/**
+ * A variable specifying JSON configuration for HIDAPI simple profile bindings.
+ *
+ * The value should be a directory path.
+ *
+ * SDL scans all `*.json` files in that directory.
+ *
+ * Simple profile devices are only enabled when a matching JSON profile exists.
+ *
+ * If this hint is not set, SDL will try to load the default directory:
+ * `src/joystick/hidapi/simple_profiles`.
+ *
+ * Supported JSON root forms:
+ *
+ * - `{ "profiles": [ ... ] }`
+ * - `{ "dpad_defs": { ... }, "buttons_defs": { ... }, "axes_defs": { ... }, "profiles": [ ... ] }`
+ * - `[ ... ]`
+ * - `{ ... }` (single profile object)
+ *
+ * Supported profile fields:
+ *
+ * - `vendor_id`: decimal or hex (e.g. `"0x11c0"`).
+ * - `product_id`: decimal or hex (e.g. `"0x5505"`).
+ * - `allow_swapped_vid_pid`: boolean, optional.
+ * - `collection`: integer, optional.
+ * - `name`: string.
+ * - `mapping_string_suffix`: string or null, optional.
+ * - `report_size_min`: integer (1-255).
+ * - `dpad`: `{ "byte_index", "up_mask", "down_mask", "left_mask", "right_mask" }`, optional.
+ * - `dpad_ref`: string, optional, references one entry in `dpad_defs`.
+ * - `buttons`: array of `{ "button", "byte_index", "mask" }`.
+ * - `buttons_ref`: string, optional, references one entry in `buttons_defs`.
+ * - `axes`: array of `{ "axis", "byte_index", "encoding", "invert" }`.
+ * - `axes_ref`: string, optional, references one entry in `axes_defs`.
+ * - `dpad_defs`: object map of reusable dpad definitions.
+ * - `buttons_defs`: object map of reusable buttons arrays.
+ * - `axes_defs`: object map of reusable axes arrays.
+ *
+ * When using `*_defs` with `profiles`, define `*_defs` before `profiles` in the same JSON object.
+ *
+ * This hint should be set before initializing joysticks and gamepads.
+ *
+ * \since This hint is available since SDL 3.2.0.
+ */
+#define SDL_HINT_JOYSTICK_HIDAPI_SIMPLE_PROFILE_CONFIG "SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE_CONFIG"
+
+/**
  * A variable controlling whether the HIDAPI driver for Nintendo GameCube
  * controllers should be used.
  *

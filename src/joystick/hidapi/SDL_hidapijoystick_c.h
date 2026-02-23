@@ -218,4 +218,23 @@ extern bool HIDAPI_SupportsPlaystationDetection(Uint16 vendor, Uint16 product);
 
 extern float HIDAPI_RemapVal(float val, float val_min, float val_max, float output_min, float output_max);
 
+#ifdef SDL_JOYSTICK_HIDAPI
+extern bool HIDAPI_Simple_IsSupportedVIDPID(Uint16 vendor_id, Uint16 product_id);
+extern const char *HIDAPI_Simple_GetMappingStringSuffix(Uint16 vendor_id, Uint16 product_id);
+#else
+static inline bool HIDAPI_Simple_IsSupportedVIDPID(Uint16 vendor_id, Uint16 product_id)
+{
+    (void)vendor_id;
+    (void)product_id;
+    return false;
+}
+
+static inline const char *HIDAPI_Simple_GetMappingStringSuffix(Uint16 vendor_id, Uint16 product_id)
+{
+    (void)vendor_id;
+    (void)product_id;
+    return NULL;
+}
+#endif
+
 #endif // SDL_JOYSTICK_HIDAPI_H

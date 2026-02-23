@@ -32,7 +32,7 @@
 
 #include "SDL_hidapi_c.h"
 #include "../joystick/usb_ids.h"
-#include "../joystick/hidapi/SDL_hidapi_simple_profile.h"
+#include "../joystick/hidapi/SDL_hidapijoystick_c.h"
 #include "../joystick/SDL_joystick_c.h"
 #include "../SDL_hints_c.h"
 

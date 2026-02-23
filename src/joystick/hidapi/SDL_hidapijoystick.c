@@ -24,7 +24,6 @@
 
 #include "../SDL_sysjoystick.h"
 #include "SDL_hidapijoystick_c.h"
-#include "SDL_hidapi_simple_profile.h"
 #include "SDL_hidapi_rumble.h"
 #include "../../SDL_hints_c.h"
 

@@ -32,7 +32,7 @@
 #include "hidapi/SDL_hidapi_flydigi.h"
 #include "hidapi/SDL_hidapi_nintendo.h"
 #include "hidapi/SDL_hidapi_sinput.h"
-#include "hidapi/SDL_hidapi_simple_profile.h"
+#include "hidapi/SDL_hidapijoystick_c.h"
 #include "../events/SDL_events_c.h"
 #include "../SDL_hints_c.h"
 

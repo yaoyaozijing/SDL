@@ -1,0 +1,91 @@
+{
+  "dpad_defs": {
+    "zhidong_v1": {
+      "byte_index": 4,
+      "up_mask": "0x40",
+      "down_mask": "0x80",
+      "left_mask": "0x10",
+      "right_mask": "0x20"
+    }
+  },
+  "buttons_defs": {
+    "zhidong_v1": [
+      { "button": "back", "byte_index": 4, "mask": "0x04" },
+      { "button": "start", "byte_index": 4, "mask": "0x08" },
+      { "button": "rightstick", "byte_index": 4, "mask": "0x02" },
+      { "button": "leftshoulder", "byte_index": 3, "mask": "0x10" },
+      { "button": "rightshoulder", "byte_index": 3, "mask": "0x80" },
+      { "button": "leftstick", "byte_index": 3, "mask": "0x40" },
+      { "button": "a", "byte_index": 3, "mask": "0x02" },
+      { "button": "b", "byte_index": 3, "mask": "0x01" },
+      { "button": "x", "byte_index": 3, "mask": "0x08" },
+      { "button": "y", "byte_index": 3, "mask": "0x04" },
+      { "button": "guide", "byte_index": 5, "mask": "0x10" },
+      { "button": "misc1", "byte_index": 5, "mask": "0x20" },
+      { "button": "misc2", "byte_index": 5, "mask": "0x04" },
+      { "button": "misc3", "byte_index": 5, "mask": "0x08" },
+      { "button": "paddle1", "byte_index": 5, "mask": "0x02" },
+      { "button": "paddle2", "byte_index": 5, "mask": "0x01" }
+    ]
+  },
+  "axes_defs": {
+    "zhidong_v1": [
+      { "axis": "leftx", "byte_index": 6, "encoding": "stick_8bit_center_0x80" },
+      { "axis": "lefty", "byte_index": 7, "encoding": "stick_8bit_center_0x80" },
+      { "axis": "rightx", "byte_index": 8, "encoding": "stick_8bit_center_0x80" },
+      { "axis": "righty", "byte_index": 9, "encoding": "stick_8bit_center_0x80" },
+      { "axis": "lefttrigger", "byte_index": 10, "encoding": "trigger_8bit_0_255" },
+      { "axis": "righttrigger", "byte_index": 11, "encoding": "trigger_8bit_0_255" }
+    ]
+  },
+  "profiles": [
+    {
+      "vendor_id": "0x11c0",
+      "product_id": "0x5505",
+      "allow_swapped_vid_pid": true,
+      "collection": 2,
+      "name": "Zhidong Controller",
+      "mapping_string_suffix": "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,",
+      "report_size_min": 12,
+      "dpad_ref": "zhidong_v1",
+      "buttons_ref": "zhidong_v1",
+      "axes_ref": "zhidong_v1"
+    },
+    {
+      "vendor_id": "0x1949",
+      "product_id": "0x00c1",
+      "allow_swapped_vid_pid": true,
+      "collection": 2,
+      "name": "Zhidong Controller",
+      "mapping_string_suffix": "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,",
+      "report_size_min": 12,
+      "dpad_ref": "zhidong_v1",
+      "buttons_ref": "zhidong_v1",
+      "axes_ref": "zhidong_v1"
+    },
+    {
+      "vendor_id": "0x2345",
+      "product_id": "0xe023",
+      "allow_swapped_vid_pid": true,
+      "collection": 2,
+      "name": "Zhidong Controller",
+      "mapping_string_suffix": "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,",
+      "report_size_min": 12,
+      "dpad_ref": "zhidong_v1",
+      "buttons_ref": "zhidong_v1",
+      "axes_ref": "zhidong_v1"
+    },
+    {
+      "vendor_id": "0x2345",
+      "product_id": "0xe024",
+      "allow_swapped_vid_pid": true,
+      "collection": 2,
+      "name": "Zhidong Controller",
+      "mapping_string_suffix": "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,",
+      "report_size_min": 12,
+      "dpad_ref": "zhidong_v1",
+      "buttons_ref": "zhidong_v1",
+      "axes_ref": "zhidong_v1"
+    }
+  ]
+}
