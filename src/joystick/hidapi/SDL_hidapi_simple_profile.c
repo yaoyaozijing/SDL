@@ -2016,13 +2016,47 @@ static bool HIDAPI_DriverSimpleProfile_PathHasCollection(const char *path, int c
 #endif
 }
 
+static bool HIDAPI_DriverSimpleProfile_PathHasAnyCollectionMarker(const char *path)
+{
+#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_GDK)
+    const char *p;
+
+    if (!path) {
+        return false;
+    }
+
+    p = path;
+    while ((p = SDL_strcasestr(p, "col")) != NULL) {
+        if (p[3] && p[4] &&
+            SDL_isdigit((unsigned char)p[3]) && SDL_isdigit((unsigned char)p[4])) {
+            return true;
+        }
+        ++p;
+    }
+    return false;
+#else
+    (void)path;
+    return false;
+#endif
+}
+
 static bool HIDAPI_DriverSimpleProfile_IsExpectedCollection(SDL_HIDAPI_Device *device, const SDL_HIDAPI_SimpleDeviceProfile *profile)
 {
 #if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_GDK)
     if (!profile || profile->collection <= 0) {
         return true;
     }
-    return HIDAPI_DriverSimpleProfile_PathHasCollection(device->path, profile->collection);
+    if (!device || !device->path) {
+        return true;
+    }
+    if (HIDAPI_DriverSimpleProfile_PathHasCollection(device->path, profile->collection)) {
+        return true;
+    }
+    if (!HIDAPI_DriverSimpleProfile_PathHasAnyCollectionMarker(device->path)) {
+        // Unknown path format; don't reject device based only on collection hint.
+        return true;
+    }
+    return false;
 #else
     (void)device;
     (void)profile;
@@ -2030,11 +2064,46 @@ static bool HIDAPI_DriverSimpleProfile_IsExpectedCollection(SDL_HIDAPI_Device *d
 #endif
 }
 
+static bool HIDAPI_DriverSimpleProfile_IsLikelyXboxProtocolDevice(SDL_GamepadType type, int interface_class, int interface_subclass, int interface_protocol)
+{
+    const int LIBUSB_CLASS_VENDOR_SPEC = 0xFF;
+    const int XB360_IFACE_SUBCLASS = 93;
+    const int XB360_IFACE_PROTOCOL = 1;    // Wired
+    const int XB360W_IFACE_PROTOCOL = 129; // Wireless
+    const int XBONE_IFACE_SUBCLASS = 71;
+    const int XBONE_IFACE_PROTOCOL = 208;
+
+    if (type == SDL_GAMEPAD_TYPE_XBOX360 || type == SDL_GAMEPAD_TYPE_XBOXONE) {
+        return true;
+    }
+
+    if (interface_class == LIBUSB_CLASS_VENDOR_SPEC &&
+        interface_subclass == XB360_IFACE_SUBCLASS &&
+        (interface_protocol == XB360_IFACE_PROTOCOL || interface_protocol == XB360W_IFACE_PROTOCOL)) {
+        return true;
+    }
+
+    if (interface_class == LIBUSB_CLASS_VENDOR_SPEC &&
+        interface_subclass == XBONE_IFACE_SUBCLASS &&
+        interface_protocol == XBONE_IFACE_PROTOCOL) {
+        return true;
+    }
+
+    return false;
+}
+
 static bool HIDAPI_DriverSimpleProfile_IsSupportedDevice(SDL_HIDAPI_Device *device, const char *name, SDL_GamepadType type, Uint16 vendor_id, Uint16 product_id, Uint16 version, int interface_number, int interface_class, int interface_subclass, int interface_protocol)
 {
     const SDL_HIDAPI_SimpleDeviceProfile *profile = HIDAPI_Simple_GetDeviceProfile(vendor_id, product_id);
+    (void)name;
+    (void)version;
+    (void)interface_number;
 
     if (!profile) {
+        return false;
+    }
+
+    if (HIDAPI_DriverSimpleProfile_IsLikelyXboxProtocolDevice(type, interface_class, interface_subclass, interface_protocol)) {
         return false;
     }
 
