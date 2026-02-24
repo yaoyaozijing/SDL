@@ -50,6 +50,14 @@ typedef struct
 
 typedef struct
 {
+    const Uint8 *packet_data;
+    Uint8 packet_size;
+    Uint8 left_trigger_byte_index;
+    Uint8 right_trigger_byte_index;
+} SDL_HIDAPI_SimpleTriggerRumbleBinding;
+
+typedef struct
+{
     int collection;
     Uint8 gyro_offset;
     Uint8 accel_offset;
@@ -57,6 +65,24 @@ typedef struct
     float accel_scale;
     float gyro_scale;
 } SDL_HIDAPI_SimpleSensorBinding;
+
+typedef struct
+{
+    Uint8 down_byte_index;
+    Uint8 down_mask;
+    Uint8 down_value;   // 1 or 0 depending on whether the "down" state is indicated by a bit being set or clear
+    Uint8 x_high_byte_index;
+    Uint8 x_low_byte_index;
+    Uint8 y_high_byte_index;
+    Uint8 y_low_byte_index;
+    Uint16 x_resolution;
+    Uint16 y_resolution;
+} SDL_HIDAPI_SimpleTouchpadBinding;
+
+#define SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE 0xFF
+
+#define SDL_HIDAPI_SIMPLE_TOUCHPAD_BINDING(down_byte, down_mask, down_value, x_high, x_low, y_high, y_low, x_res, y_res) \
+    { (down_byte), (down_mask), (down_value), (x_high), (x_low), (y_high), (y_low), (x_res), (y_res) }
 
 #include "simple_profiles/controllers.h"
 
