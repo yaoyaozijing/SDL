@@ -74,11 +74,6 @@ typedef struct
 {
     const Uint8 *packet_data;
     Uint8 packet_size;
-    bool set_command_byte;
-    Uint8 command_byte_index;
-    Uint8 command_byte_value;
-    Uint8 low_frequency_byte_index;
-    Uint8 high_frequency_byte_index;
 } SDL_HIDAPI_SimpleRumbleBinding;
 
 typedef struct
@@ -119,6 +114,8 @@ static const SDL_HIDAPI_SimpleButtonBinding SDL_hidapi_zhidong_layout_v1_buttons
     { SDL_GAMEPAD_BUTTON_MISC3,          5, 0x08 },
     { SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1,  5, 0x02 },
     { SDL_GAMEPAD_BUTTON_LEFT_PADDLE1,   5, 0x01 },
+    { SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2,  5, 0x80 },
+    { SDL_GAMEPAD_BUTTON_LEFT_PADDLE2,   5, 0x40 },
 };
 
 static const SDL_HIDAPI_SimpleAxisBinding SDL_hidapi_zhidong_layout_v1_axes[] = {
@@ -140,17 +137,12 @@ static const SDL_HIDAPI_SimpleReportLayout SDL_hidapi_zhidong_layout_v1 = {
 };
 
 static const Uint8 SDL_hidapi_zhidong_rumble_v1_packet[] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 static const SDL_HIDAPI_SimpleRumbleBinding SDL_hidapi_zhidong_rumble_v1 = {
     SDL_hidapi_zhidong_rumble_v1_packet,
-    (Uint8)SDL_arraysize(SDL_hidapi_zhidong_rumble_v1_packet),
-    true,
-    1,
-    0x08,
-    3,
-    4
+    (Uint8)SDL_arraysize(SDL_hidapi_zhidong_rumble_v1_packet)
 };
 
 /*

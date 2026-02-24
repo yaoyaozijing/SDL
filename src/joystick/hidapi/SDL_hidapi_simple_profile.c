@@ -161,6 +161,21 @@ static SDL_hid_device *HIDAPI_DriverSimpleProfile_OpenGamepadUsageHandle(SDL_HID
 #endif
 }
 
+static int HIDAPI_DriverSimpleProfile_WriteRumbleToOutputHandle(SDL_HIDAPI_Device *device, const Uint8 *data, int size, void *userdata)
+{
+    SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
+    SDL_hid_device *handle = NULL;
+    (void)userdata;
+
+    if (ctx) {
+        handle = ctx->rumble_output_handle;
+    }
+    if (!handle) {
+        return -1;
+    }
+    return SDL_hid_write(handle, data, size);
+}
+
 static bool HIDAPI_DriverSimpleProfile_IsExpectedCollection(SDL_HIDAPI_Device *device, const SDL_HIDAPI_SimpleDeviceProfile *profile)
 {
 #if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_GDK)
@@ -246,6 +261,8 @@ static bool HIDAPI_DriverSimpleProfile_OpenJoystick(SDL_HIDAPI_Device *device, S
 
 static bool HIDAPI_DriverSimpleProfile_RumbleJoystick(SDL_HIDAPI_Device *device, SDL_Joystick *joystick, Uint16 low_frequency_rumble, Uint16 high_frequency_rumble)
 {
+    const int RUMBLE_LOW_FREQUENCY_BYTE_INDEX = 3;
+    const int RUMBLE_HIGH_FREQUENCY_BYTE_INDEX = 4;
     SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
     const SDL_HIDAPI_SimpleRumbleBinding *rumble = (ctx && ctx->profile) ? ctx->profile->rumble : NULL;
     Uint8 rumble_packet[2 * USB_PACKET_LENGTH];
@@ -257,21 +274,17 @@ static bool HIDAPI_DriverSimpleProfile_RumbleJoystick(SDL_HIDAPI_Device *device,
 
     rumble_packet_size = rumble->packet_size;
     if (rumble_packet_size > (int)sizeof(rumble_packet) ||
-        (rumble->set_command_byte && rumble->command_byte_index >= rumble_packet_size) ||
-        rumble->low_frequency_byte_index >= rumble_packet_size ||
-        rumble->high_frequency_byte_index >= rumble_packet_size) {
+        RUMBLE_LOW_FREQUENCY_BYTE_INDEX >= rumble_packet_size ||
+        RUMBLE_HIGH_FREQUENCY_BYTE_INDEX >= rumble_packet_size) {
         return SDL_Unsupported();
     }
 
     SDL_memcpy(rumble_packet, rumble->packet_data, rumble_packet_size);
-    if (rumble->set_command_byte) {
-        rumble_packet[rumble->command_byte_index] = rumble->command_byte_value;
-    }
-    rumble_packet[rumble->low_frequency_byte_index] = (Uint8)(low_frequency_rumble >> 8);
-    rumble_packet[rumble->high_frequency_byte_index] = (Uint8)(high_frequency_rumble >> 8);
+    rumble_packet[RUMBLE_LOW_FREQUENCY_BYTE_INDEX] = (Uint8)(low_frequency_rumble >> 8);
+    rumble_packet[RUMBLE_HIGH_FREQUENCY_BYTE_INDEX] = (Uint8)(high_frequency_rumble >> 8);
 
     if (ctx && ctx->rumble_output_handle) {
-        if (SDL_hid_write(ctx->rumble_output_handle, rumble_packet, rumble_packet_size) != rumble_packet_size) {
+        if (SDL_HIDAPI_SendRumbleWithWriteCallback(device, rumble_packet, rumble_packet_size, HIDAPI_DriverSimpleProfile_WriteRumbleToOutputHandle, NULL) != rumble_packet_size) {
             return SDL_SetError("Couldn't send rumble packet");
         }
     } else {
@@ -289,13 +302,12 @@ static bool HIDAPI_DriverSimpleProfile_RumbleJoystickTriggers(SDL_HIDAPI_Device 
 
 static Uint32 HIDAPI_DriverSimpleProfile_GetJoystickCapabilities(SDL_HIDAPI_Device *device, SDL_Joystick *joystick)
 {
+    const int RUMBLE_HIGH_FREQUENCY_BYTE_INDEX = 4;
     SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
     const SDL_HIDAPI_SimpleRumbleBinding *rumble = (ctx && ctx->profile) ? ctx->profile->rumble : NULL;
 
-    if (rumble && rumble->packet_data && rumble->packet_size > 0 &&
-        (!rumble->set_command_byte || rumble->command_byte_index < rumble->packet_size) &&
-        rumble->low_frequency_byte_index < rumble->packet_size &&
-        rumble->high_frequency_byte_index < rumble->packet_size) {
+    if (rumble && rumble->packet_data &&
+        rumble->packet_size > RUMBLE_HIGH_FREQUENCY_BYTE_INDEX) {
         return SDL_JOYSTICK_CAP_RUMBLE;
     }
     return 0;
