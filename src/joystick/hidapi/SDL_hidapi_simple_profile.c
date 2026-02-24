@@ -24,6 +24,7 @@
 
 #include "../SDL_sysjoystick.h"
 #include "SDL_hidapijoystick_c.h"
+#include "SDL_hidapi_rumble.h"
 #include "SDL_hidapi_simple_profile.h"
 
 #ifdef SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE
@@ -40,6 +41,7 @@
 typedef struct
 {
     const SDL_HIDAPI_SimpleDeviceProfile *profile;
+    SDL_hid_device *rumble_output_handle;
     bool last_state_initialized;
     Uint8 last_state[USB_PACKET_LENGTH];
 } SDL_DriverSimpleProfile_Context;
@@ -73,6 +75,89 @@ static bool HIDAPI_DriverSimpleProfile_PathHasCollection(const char *path, int c
     (void)path;
     (void)collection;
     return false;
+#endif
+}
+
+static bool HIDAPI_DriverSimpleProfile_MatchCollectionPath(const char *a, const char *b)
+{
+#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_GDK)
+    const char *a_col;
+    const char *b_col;
+
+    if (!a || !b) {
+        return false;
+    }
+
+    a_col = SDL_strcasestr(a, "&col");
+    b_col = SDL_strcasestr(b, "&col");
+    if (a_col && b_col) {
+        size_t a_prefix = (size_t)(a_col - a);
+        size_t b_prefix = (size_t)(b_col - b);
+        if (a_prefix == b_prefix && SDL_strncasecmp(a, b, a_prefix) == 0) {
+            return true;
+        }
+    }
+#endif
+    return (a && b && SDL_strcmp(a, b) == 0);
+}
+
+static SDL_hid_device *HIDAPI_DriverSimpleProfile_OpenGamepadUsageHandle(SDL_HIDAPI_Device *device)
+{
+#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_GDK)
+    const Uint16 USAGE_PAGE_GENERIC_DESKTOP = 0x0001;
+    const Uint16 USAGE_GENERIC_GAMEPAD = 0x0005;
+    SDL_hid_device *handle = NULL;
+    struct SDL_hid_device_info *devs;
+    struct SDL_hid_device_info *info;
+
+    if (!device || !device->path) {
+        return NULL;
+    }
+
+    devs = SDL_hid_enumerate(device->vendor_id, device->product_id);
+    for (info = devs; info; info = info->next) {
+        if (!info->path) {
+            continue;
+        }
+        if (info->usage_page != USAGE_PAGE_GENERIC_DESKTOP || info->usage != USAGE_GENERIC_GAMEPAD) {
+            continue;
+        }
+        if (!HIDAPI_DriverSimpleProfile_MatchCollectionPath(device->path, info->path)) {
+            continue;
+        }
+        if (SDL_strcmp(info->path, device->path) == 0) {
+            continue;
+        }
+        handle = SDL_hid_open_path(info->path);
+        if (handle) {
+            break;
+        }
+    }
+
+    // Fallback: pick any gamepad usage interface with the same VID/PID.
+    if (!handle) {
+        for (info = devs; info; info = info->next) {
+            if (!info->path) {
+                continue;
+            }
+            if (info->usage_page != USAGE_PAGE_GENERIC_DESKTOP || info->usage != USAGE_GENERIC_GAMEPAD) {
+                continue;
+            }
+            if (SDL_strcmp(info->path, device->path) == 0) {
+                continue;
+            }
+            handle = SDL_hid_open_path(info->path);
+            if (handle) {
+                break;
+            }
+        }
+    }
+
+    SDL_hid_free_enumeration(devs);
+    return handle;
+#else
+    (void)device;
+    return NULL;
 #endif
 }
 
@@ -120,6 +205,14 @@ static bool HIDAPI_DriverSimpleProfile_InitDevice(SDL_HIDAPI_Device *device)
     ctx->profile = profile;
     device->context = ctx;
 
+    if (profile->rumble &&
+        (device->usage_page != 0x0001 || device->usage != 0x0005)) {
+        ctx->rumble_output_handle = HIDAPI_DriverSimpleProfile_OpenGamepadUsageHandle(device);
+        if (ctx->rumble_output_handle) {
+            SDL_hid_set_nonblocking(ctx->rumble_output_handle, 1);
+        }
+    }
+
     HIDAPI_SetDeviceName(device, profile->name ? profile->name : "Generic HID Controller");
     return HIDAPI_JoystickConnected(device, NULL);
 }
@@ -153,7 +246,40 @@ static bool HIDAPI_DriverSimpleProfile_OpenJoystick(SDL_HIDAPI_Device *device, S
 
 static bool HIDAPI_DriverSimpleProfile_RumbleJoystick(SDL_HIDAPI_Device *device, SDL_Joystick *joystick, Uint16 low_frequency_rumble, Uint16 high_frequency_rumble)
 {
-    return SDL_Unsupported();
+    SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
+    const SDL_HIDAPI_SimpleRumbleBinding *rumble = (ctx && ctx->profile) ? ctx->profile->rumble : NULL;
+    Uint8 rumble_packet[2 * USB_PACKET_LENGTH];
+    int rumble_packet_size;
+
+    if (!rumble || !rumble->packet_data || rumble->packet_size == 0) {
+        return SDL_Unsupported();
+    }
+
+    rumble_packet_size = rumble->packet_size;
+    if (rumble_packet_size > (int)sizeof(rumble_packet) ||
+        (rumble->set_command_byte && rumble->command_byte_index >= rumble_packet_size) ||
+        rumble->low_frequency_byte_index >= rumble_packet_size ||
+        rumble->high_frequency_byte_index >= rumble_packet_size) {
+        return SDL_Unsupported();
+    }
+
+    SDL_memcpy(rumble_packet, rumble->packet_data, rumble_packet_size);
+    if (rumble->set_command_byte) {
+        rumble_packet[rumble->command_byte_index] = rumble->command_byte_value;
+    }
+    rumble_packet[rumble->low_frequency_byte_index] = (Uint8)(low_frequency_rumble >> 8);
+    rumble_packet[rumble->high_frequency_byte_index] = (Uint8)(high_frequency_rumble >> 8);
+
+    if (ctx && ctx->rumble_output_handle) {
+        if (SDL_hid_write(ctx->rumble_output_handle, rumble_packet, rumble_packet_size) != rumble_packet_size) {
+            return SDL_SetError("Couldn't send rumble packet");
+        }
+    } else {
+        if (SDL_HIDAPI_SendRumble(device, rumble_packet, rumble_packet_size) != rumble_packet_size) {
+            return SDL_SetError("Couldn't send rumble packet");
+        }
+    }
+    return true;
 }
 
 static bool HIDAPI_DriverSimpleProfile_RumbleJoystickTriggers(SDL_HIDAPI_Device *device, SDL_Joystick *joystick, Uint16 left_rumble, Uint16 right_rumble)
@@ -163,6 +289,15 @@ static bool HIDAPI_DriverSimpleProfile_RumbleJoystickTriggers(SDL_HIDAPI_Device 
 
 static Uint32 HIDAPI_DriverSimpleProfile_GetJoystickCapabilities(SDL_HIDAPI_Device *device, SDL_Joystick *joystick)
 {
+    SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
+    const SDL_HIDAPI_SimpleRumbleBinding *rumble = (ctx && ctx->profile) ? ctx->profile->rumble : NULL;
+
+    if (rumble && rumble->packet_data && rumble->packet_size > 0 &&
+        (!rumble->set_command_byte || rumble->command_byte_index < rumble->packet_size) &&
+        rumble->low_frequency_byte_index < rumble->packet_size &&
+        rumble->high_frequency_byte_index < rumble->packet_size) {
+        return SDL_JOYSTICK_CAP_RUMBLE;
+    }
     return 0;
 }
 
@@ -328,6 +463,10 @@ static void HIDAPI_DriverSimpleProfile_FreeDevice(SDL_HIDAPI_Device *device)
 {
     SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
     if (ctx) {
+        if (ctx->rumble_output_handle) {
+            SDL_hid_close(ctx->rumble_output_handle);
+            ctx->rumble_output_handle = NULL;
+        }
         SDL_free(ctx);
         device->context = NULL;
     }

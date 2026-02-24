@@ -72,6 +72,17 @@ typedef struct
 
 typedef struct
 {
+    const Uint8 *packet_data;
+    Uint8 packet_size;
+    bool set_command_byte;
+    Uint8 command_byte_index;
+    Uint8 command_byte_value;
+    Uint8 low_frequency_byte_index;
+    Uint8 high_frequency_byte_index;
+} SDL_HIDAPI_SimpleRumbleBinding;
+
+typedef struct
+{
     Uint16 vendor_id;
     Uint16 product_id;
     bool allow_swapped_vid_pid;
@@ -79,6 +90,7 @@ typedef struct
     const char *name;
     const char *mapping_string_suffix;
     const SDL_HIDAPI_SimpleReportLayout *layout;
+    const SDL_HIDAPI_SimpleRumbleBinding *rumble;
 } SDL_HIDAPI_SimpleDeviceProfile;
 
 /*
@@ -127,15 +139,29 @@ static const SDL_HIDAPI_SimpleReportLayout SDL_hidapi_zhidong_layout_v1 = {
     (int)SDL_arraysize(SDL_hidapi_zhidong_layout_v1_axes),
 };
 
+static const Uint8 SDL_hidapi_zhidong_rumble_v1_packet[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static const SDL_HIDAPI_SimpleRumbleBinding SDL_hidapi_zhidong_rumble_v1 = {
+    SDL_hidapi_zhidong_rumble_v1_packet,
+    (Uint8)SDL_arraysize(SDL_hidapi_zhidong_rumble_v1_packet),
+    true,
+    1,
+    0x08,
+    3,
+    4
+};
+
 /*
  * Controller profiles.
  * The first 4 entries intentionally keep the existing device display name.
  */
 static const SDL_HIDAPI_SimpleDeviceProfile SDL_hidapi_simple_profiles[] = {
-    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1 },
-    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1 },
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1 },
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1 },
+    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1 },
+    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1 },
+    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1 },
+    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1 },
 };
 
 static inline bool HIDAPI_Simple_ProfileMatchesVIDPID(const SDL_HIDAPI_SimpleDeviceProfile *profile, Uint16 vendor_id, Uint16 product_id)
