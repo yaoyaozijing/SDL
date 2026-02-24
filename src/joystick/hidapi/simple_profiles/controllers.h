@@ -10,7 +10,6 @@ typedef struct
     const char *mapping_string_suffix;
     const SDL_HIDAPI_SimpleReportLayout *layout;
     const SDL_HIDAPI_SimpleRumbleBinding *rumble;
-    const SDL_HIDAPI_SimpleTriggerOverrideBinding *trigger_override;
     const SDL_HIDAPI_SimpleSensorBinding *sensors;
 } SDL_HIDAPI_SimpleDeviceProfile;
 

@@ -508,7 +508,6 @@ static Sint16 HIDAPI_DriverSimpleProfile_DecodeAxis(const SDL_HIDAPI_SimpleAxisB
 static void HIDAPI_DriverSimpleProfile_HandleStatePacket(SDL_Joystick *joystick, SDL_DriverSimpleProfile_Context *ctx, const Uint8 *data, int size)
 {
     const SDL_HIDAPI_SimpleReportLayout *layout = ctx->profile ? ctx->profile->layout : NULL;
-    const SDL_HIDAPI_SimpleTriggerOverrideBinding *trigger_override = ctx->profile ? ctx->profile->trigger_override : NULL;
     Uint64 timestamp = SDL_GetTicksNS();
     const bool initial = !ctx->last_state_initialized;
     const Uint8 *last = ctx->last_state;
@@ -547,31 +546,6 @@ static void HIDAPI_DriverSimpleProfile_HandleStatePacket(SDL_Joystick *joystick,
         }
         changed = (initial || last[byte_index] != data[byte_index]);
         raw_value = data[byte_index];
-
-        /* Some controllers expose a trigger end-stop switch in the button bits.
-         * When pressed, force the corresponding trigger axis to full travel.
-         */
-        if (trigger_override && binding->encoding == SDL_HIDAPI_AXIS_ENCODING_TRIGGER_8BIT_0_255) {
-            Uint8 switch_byte = 0;
-            Uint8 switch_mask = 0;
-
-            if (binding->axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER) {
-                switch_byte = trigger_override->left_byte_index;
-                switch_mask = trigger_override->left_mask;
-            } else if (binding->axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) {
-                switch_byte = trigger_override->right_byte_index;
-                switch_mask = trigger_override->right_mask;
-            }
-
-            if (switch_mask != 0 && switch_byte < size) {
-                if ((data[switch_byte] & switch_mask) != 0) {
-                    raw_value = 0xFF;
-                }
-                if (initial || last[switch_byte] != data[switch_byte]) {
-                    changed = true;
-                }
-            }
-        }
 
         if (changed) {
             Sint16 axis = HIDAPI_DriverSimpleProfile_DecodeAxis(binding, raw_value);

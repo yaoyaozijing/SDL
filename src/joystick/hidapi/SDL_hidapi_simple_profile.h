@@ -48,14 +48,6 @@ typedef struct
 
 typedef struct
 {
-    Uint8 left_byte_index;
-    Uint8 left_mask;
-    Uint8 right_byte_index;
-    Uint8 right_mask;
-} SDL_HIDAPI_SimpleTriggerOverrideBinding;
-
-typedef struct
-{
     int collection;
     Uint8 gyro_offset;
     Uint8 accel_offset;
