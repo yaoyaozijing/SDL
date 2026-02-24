@@ -822,7 +822,6 @@
     </ClCompile>
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapijoystick.c" />
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_8bitdo.c" />
-    <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_beitong.c" />
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_simple_profile.c" />
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_flydigi.c" />
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_gamesir.c" />

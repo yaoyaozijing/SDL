@@ -1102,8 +1102,7 @@ bool SDL_HIDAPI_ShouldIgnoreDevice(int bus, Uint16 vendor_id, Uint16 product_id,
                 return false;
             }
             return true;
-        } else if ((vendor_id == USB_VENDOR_BEITONG && product_id == USB_PRODUCT_BEITONG_ZEUS2) ||
-                   HIDAPI_IsSimpleProfiledDevice(vendor_id, product_id)) {
+        } else if (HIDAPI_IsSimpleProfiledDevice(vendor_id, product_id)) {
             if (usage_page == USB_USAGEPAGE_GENERIC_DESKTOP &&
                 (usage == USB_USAGE_GENERIC_KEYBOARD || usage == USB_USAGE_GENERIC_MOUSE)) {
                 return true;

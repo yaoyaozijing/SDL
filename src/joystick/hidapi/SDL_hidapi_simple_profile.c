@@ -42,6 +42,9 @@ typedef struct
 {
     const SDL_HIDAPI_SimpleDeviceProfile *profile;
     SDL_hid_device *rumble_output_handle;
+    SDL_hid_device *sensor_input_handle;
+    bool sensors_enabled;
+    Uint64 sensor_timestamp_ns;
     bool last_state_initialized;
     Uint8 last_state[USB_PACKET_LENGTH];
 } SDL_DriverSimpleProfile_Context;
@@ -161,6 +164,46 @@ static SDL_hid_device *HIDAPI_DriverSimpleProfile_OpenGamepadUsageHandle(SDL_HID
 #endif
 }
 
+static SDL_hid_device *HIDAPI_DriverSimpleProfile_OpenCollectionHandle(SDL_HIDAPI_Device *device, int collection)
+{
+#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_GDK)
+    SDL_hid_device *handle = NULL;
+    struct SDL_hid_device_info *devs;
+    struct SDL_hid_device_info *info;
+
+    if (!device || !device->path || collection <= 0) {
+        return NULL;
+    }
+
+    devs = SDL_hid_enumerate(device->vendor_id, device->product_id);
+    for (info = devs; info; info = info->next) {
+        if (!info->path) {
+            continue;
+        }
+        if (!HIDAPI_DriverSimpleProfile_PathHasCollection(info->path, collection)) {
+            continue;
+        }
+        if (!HIDAPI_DriverSimpleProfile_MatchCollectionPath(device->path, info->path)) {
+            continue;
+        }
+        if (SDL_strcmp(info->path, device->path) == 0) {
+            continue;
+        }
+        handle = SDL_hid_open_path(info->path);
+        if (handle) {
+            break;
+        }
+    }
+
+    SDL_hid_free_enumeration(devs);
+    return handle;
+#else
+    (void)device;
+    (void)collection;
+    return NULL;
+#endif
+}
+
 static int HIDAPI_DriverSimpleProfile_WriteRumbleToOutputHandle(SDL_HIDAPI_Device *device, const Uint8 *data, int size, void *userdata)
 {
     SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
@@ -208,6 +251,7 @@ static bool HIDAPI_DriverSimpleProfile_IsSupportedDevice(SDL_HIDAPI_Device *devi
 static bool HIDAPI_DriverSimpleProfile_InitDevice(SDL_HIDAPI_Device *device)
 {
     const SDL_HIDAPI_SimpleDeviceProfile *profile = HIDAPI_Simple_GetDeviceProfile(device->vendor_id, device->product_id);
+    const SDL_HIDAPI_SimpleSensorBinding *sensors = profile ? profile->sensors : NULL;
     SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)SDL_calloc(1, sizeof(*ctx));
 
     if (!profile) {
@@ -225,6 +269,12 @@ static bool HIDAPI_DriverSimpleProfile_InitDevice(SDL_HIDAPI_Device *device)
         ctx->rumble_output_handle = HIDAPI_DriverSimpleProfile_OpenGamepadUsageHandle(device);
         if (ctx->rumble_output_handle) {
             SDL_hid_set_nonblocking(ctx->rumble_output_handle, 1);
+        }
+    }
+    if (sensors && sensors->collection > 0) {
+        ctx->sensor_input_handle = HIDAPI_DriverSimpleProfile_OpenCollectionHandle(device, sensors->collection);
+        if (ctx->sensor_input_handle) {
+            SDL_hid_set_nonblocking(ctx->sensor_input_handle, 1);
         }
     }
 
@@ -245,6 +295,8 @@ static bool HIDAPI_DriverSimpleProfile_OpenJoystick(SDL_HIDAPI_Device *device, S
 {
     SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
     const SDL_HIDAPI_SimpleReportLayout *layout = ctx->profile ? ctx->profile->layout : NULL;
+    const SDL_HIDAPI_SimpleSensorBinding *sensors = ctx->profile ? ctx->profile->sensors : NULL;
+    int i;
 
     SDL_AssertJoysticksLocked();
 
@@ -255,6 +307,19 @@ static bool HIDAPI_DriverSimpleProfile_OpenJoystick(SDL_HIDAPI_Device *device, S
     joystick->naxes = SDL_GAMEPAD_AXIS_COUNT;
     joystick->nhats = (layout &&
                        (layout->dpad.up_mask || layout->dpad.down_mask || layout->dpad.left_mask || layout->dpad.right_mask)) ? 1 : 0;
+
+    if (sensors) {
+        SDL_PrivateJoystickAddSensor(joystick, SDL_SENSOR_GYRO, sensors->report_rate_hz);
+        SDL_PrivateJoystickAddSensor(joystick, SDL_SENSOR_ACCEL, sensors->report_rate_hz);
+
+        /* Keep sensor stream active by default so test tools can read data immediately. */
+        ctx->sensors_enabled = true;
+        ctx->sensor_timestamp_ns = SDL_GetTicksNS();
+        joystick->nsensors_enabled = joystick->nsensors;
+        for (i = 0; i < joystick->nsensors; ++i) {
+            joystick->sensors[i].enabled = true;
+        }
+    }
 
     return true;
 }
@@ -305,12 +370,13 @@ static Uint32 HIDAPI_DriverSimpleProfile_GetJoystickCapabilities(SDL_HIDAPI_Devi
     const int RUMBLE_HIGH_FREQUENCY_BYTE_INDEX = 4;
     SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
     const SDL_HIDAPI_SimpleRumbleBinding *rumble = (ctx && ctx->profile) ? ctx->profile->rumble : NULL;
+    Uint32 caps = 0;
 
     if (rumble && rumble->packet_data &&
         rumble->packet_size > RUMBLE_HIGH_FREQUENCY_BYTE_INDEX) {
-        return SDL_JOYSTICK_CAP_RUMBLE;
+        caps |= SDL_JOYSTICK_CAP_RUMBLE;
     }
-    return 0;
+    return caps;
 }
 
 static bool HIDAPI_DriverSimpleProfile_SetJoystickLED(SDL_HIDAPI_Device *device, SDL_Joystick *joystick, Uint8 red, Uint8 green, Uint8 blue)
@@ -325,7 +391,18 @@ static bool HIDAPI_DriverSimpleProfile_SendJoystickEffect(SDL_HIDAPI_Device *dev
 
 static bool HIDAPI_DriverSimpleProfile_SetJoystickSensorsEnabled(SDL_HIDAPI_Device *device, SDL_Joystick *joystick, bool enabled)
 {
-    return SDL_Unsupported();
+    SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
+    const SDL_HIDAPI_SimpleSensorBinding *sensors = (ctx && ctx->profile) ? ctx->profile->sensors : NULL;
+
+    if (!sensors) {
+        return SDL_Unsupported();
+    }
+
+    ctx->sensors_enabled = enabled;
+    if (enabled) {
+        ctx->sensor_timestamp_ns = SDL_GetTicksNS();
+    }
+    return true;
 }
 
 static Uint8 HIDAPI_DriverSimpleProfile_GetHat(const SDL_HIDAPI_SimpleDPadBinding *dpad, const Uint8 *data, int size)
@@ -439,12 +516,57 @@ static void HIDAPI_DriverSimpleProfile_HandleStatePacket(SDL_Joystick *joystick,
     ctx->last_state_initialized = true;
 }
 
+static void HIDAPI_DriverSimpleProfile_HandleSensorPacket(SDL_Joystick *joystick, SDL_DriverSimpleProfile_Context *ctx, const Uint8 *data, int size)
+{
+    const SDL_HIDAPI_SimpleSensorBinding *sensors = ctx->profile ? ctx->profile->sensors : NULL;
+    Uint64 timestamp;
+    Uint64 sensor_timestamp;
+    float values[3];
+    Sint16 accel_x, accel_y, accel_z;
+    Sint16 gyro_x, gyro_y, gyro_z;
+
+    if (!sensors || !ctx->sensors_enabled) {
+        return;
+    }
+    if (size < sensors->report_size_min) {
+        return;
+    }
+    if ((sensors->gyro_offset + 5) >= size || (sensors->accel_offset + 5) >= size) {
+        return;
+    }
+
+    timestamp = SDL_GetTicksNS();
+    sensor_timestamp = ctx->sensor_timestamp_ns;
+    if (!sensor_timestamp) {
+        sensor_timestamp = timestamp;
+    }
+    ctx->sensor_timestamp_ns = timestamp;
+
+    gyro_x = LOAD16(data[sensors->gyro_offset + 0], data[sensors->gyro_offset + 1]);
+    gyro_y = LOAD16(data[sensors->gyro_offset + 2], data[sensors->gyro_offset + 3]);
+    gyro_z = LOAD16(data[sensors->gyro_offset + 4], data[sensors->gyro_offset + 5]);
+    accel_x = LOAD16(data[sensors->accel_offset + 0], data[sensors->accel_offset + 1]);
+    accel_y = LOAD16(data[sensors->accel_offset + 2], data[sensors->accel_offset + 3]);
+    accel_z = LOAD16(data[sensors->accel_offset + 4], data[sensors->accel_offset + 5]);
+
+    values[0] = (float)accel_x * sensors->accel_scale;
+    values[1] = (float)accel_y * sensors->accel_scale;
+    values[2] = (float)accel_z * sensors->accel_scale;
+    SDL_SendJoystickSensor(timestamp, joystick, SDL_SENSOR_ACCEL, sensor_timestamp, values, 3);
+
+    values[0] = (float)gyro_x * sensors->gyro_scale;
+    values[1] = (float)gyro_y * sensors->gyro_scale;
+    values[2] = (float)gyro_z * sensors->gyro_scale;
+    SDL_SendJoystickSensor(timestamp, joystick, SDL_SENSOR_GYRO, sensor_timestamp, values, 3);
+}
+
 static bool HIDAPI_DriverSimpleProfile_UpdateDevice(SDL_HIDAPI_Device *device)
 {
     SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
     SDL_Joystick *joystick = NULL;
     Uint8 data[USB_PACKET_LENGTH];
     int size = 0;
+    int sensor_size = 0;
 
     if (device->num_joysticks > 0) {
         joystick = SDL_GetJoystickFromID(device->joysticks[0]);
@@ -458,6 +580,19 @@ static bool HIDAPI_DriverSimpleProfile_UpdateDevice(SDL_HIDAPI_Device *device)
             continue;
         }
         HIDAPI_DriverSimpleProfile_HandleStatePacket(joystick, ctx, data, size);
+    }
+
+    if (ctx->sensor_input_handle && joystick) {
+        while ((sensor_size = SDL_hid_read_timeout(ctx->sensor_input_handle, data, sizeof(data), 0)) > 0) {
+#ifdef DEBUG_SIMPLE_PROFILE_PROTOCOL
+            HIDAPI_DumpPacket("Simple profile IMU packet: size = %d", data, sensor_size);
+#endif
+            HIDAPI_DriverSimpleProfile_HandleSensorPacket(joystick, ctx, data, sensor_size);
+        }
+        if (sensor_size < 0) {
+            SDL_hid_close(ctx->sensor_input_handle);
+            ctx->sensor_input_handle = NULL;
+        }
     }
 
     if (size < 0 && device->num_joysticks > 0) {
@@ -478,6 +613,10 @@ static void HIDAPI_DriverSimpleProfile_FreeDevice(SDL_HIDAPI_Device *device)
         if (ctx->rumble_output_handle) {
             SDL_hid_close(ctx->rumble_output_handle);
             ctx->rumble_output_handle = NULL;
+        }
+        if (ctx->sensor_input_handle) {
+            SDL_hid_close(ctx->sensor_input_handle);
+            ctx->sensor_input_handle = NULL;
         }
         SDL_free(ctx);
         device->context = NULL;

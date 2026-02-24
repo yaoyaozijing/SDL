@@ -1558,9 +1558,6 @@
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_8bitdo.c">
       <Filter>joystick\hidapi</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_beitong.c">
-      <Filter>joystick\hidapi</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\joystick\hidapi\SDL_hidapi_simple_profile.c">
       <Filter>joystick\hidapi</Filter>
     </ClCompile>

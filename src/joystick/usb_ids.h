@@ -30,7 +30,6 @@
 #define USB_VENDOR_ASTRO        0x9886
 #define USB_VENDOR_ASUS         0x0b05
 #define USB_VENDOR_BACKBONE     0x358a
-#define USB_VENDOR_BEITONG      0x20bc
 #define USB_VENDOR_GAMESIR      0x3537
 #define USB_VENDOR_DRAGONRISE   0x0079
 #define USB_VENDOR_FLYDIGI_V1   0x04b4
@@ -63,9 +62,6 @@
 #define USB_VENDOR_ZEROPLUS     0x0c12
 #define USB_VENDOR_RASPBERRYPI  0x2e8a // Commercial hardware from various companies are registered under this VID
 #define USB_VENDOR_ZUIKI        0x33dd
-#define USB_VENDOR_ZHIDONG_USB_XINPUT 0x11c0
-#define USB_VENDOR_ZHIDONG_USB_DINPUT 0x1949
-#define USB_VENDOR_ZHIDONG_24G  0x2345
 
 #define USB_PRODUCT_8BITDO_SF30_PRO                       0x6000    // B + START
 #define USB_PRODUCT_8BITDO_SF30_PRO_BT                    0x6100    // B + START
@@ -79,11 +75,6 @@
 #define USB_PRODUCT_ASTRO_C40_XBOX360                     0x0024
 #define USB_PRODUCT_BACKBONE_ONE_IOS                      0x0103
 #define USB_PRODUCT_BACKBONE_ONE_IOS_PS5                  0x0104
-#define USB_PRODUCT_BEITONG_ZEUS2                         0x5076
-#define USB_PRODUCT_ZHIDONG_USB_XINPUT                    0x5505
-#define USB_PRODUCT_ZHIDONG_USB_DINPUT                    0x00c1
-#define USB_PRODUCT_ZHIDONG_24G_XINPUT                    0xe023
-#define USB_PRODUCT_ZHIDONG_24G_DINPUT                    0xe024
 #define USB_PRODUCT_BDA_XB1_CLASSIC                       0x581a
 #define USB_PRODUCT_BDA_XB1_FIGHTPAD                      0x791a
 #define USB_PRODUCT_BDA_XB1_SPECTRA_PRO                   0x592a

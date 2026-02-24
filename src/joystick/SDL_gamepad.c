@@ -1272,8 +1272,6 @@ static GamepadMapping_t *SDL_CreateMappingForHIDAPIGamepad(SDL_GUID guid)
             }
         } else if (SDL_IsJoystickGameSirController(vendor, product)) {
             SDL_strlcat(mapping_string, "paddle1:b11,paddle2:b12,paddle3:b13,paddle4:b14,misc2:b15,misc3:b16,", sizeof(mapping_string));
-        } else if (vendor == USB_VENDOR_BEITONG && product == USB_PRODUCT_BEITONG_ZEUS2) {
-            SDL_strlcat(mapping_string, "paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", sizeof(mapping_string));
         } else if (profile_mapping) {
             SDL_strlcat(mapping_string, profile_mapping, sizeof(mapping_string));
         } else if (vendor == USB_VENDOR_8BITDO && product == USB_PRODUCT_8BITDO_ULTIMATE2_WIRELESS) {

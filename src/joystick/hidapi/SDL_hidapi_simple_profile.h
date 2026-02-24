@@ -30,6 +30,18 @@
  * 2) Adding one SDL_HIDAPI_SimpleDeviceProfile entry to SDL_hidapi_simple_profiles
  */
 
+/* VID/PID values owned by simple-profile-based controllers. */
+#define USB_VENDOR_ZHIDONG_USB_XINPUT 0x11c0
+#define USB_VENDOR_ZHIDONG_USB_DINPUT 0x1949
+#define USB_VENDOR_ZHIDONG_24G 0x2345
+#define USB_VENDOR_BEITONG 0x20bc
+
+#define USB_PRODUCT_ZHIDONG_USB_XINPUT 0x5505
+#define USB_PRODUCT_ZHIDONG_USB_DINPUT 0x00c1
+#define USB_PRODUCT_ZHIDONG_24G_XINPUT 0xe023
+#define USB_PRODUCT_ZHIDONG_24G_DINPUT 0xe024
+#define USB_PRODUCT_BEITONG_ZEUS2 0x5076
+
 typedef enum
 {
     SDL_HIDAPI_AXIS_ENCODING_STICK_8BIT_CENTER_0x80,
@@ -78,6 +90,17 @@ typedef struct
 
 typedef struct
 {
+    int collection;
+    Uint8 report_size_min;
+    Uint8 gyro_offset;
+    Uint8 accel_offset;
+    float report_rate_hz;
+    float accel_scale;
+    float gyro_scale;
+} SDL_HIDAPI_SimpleSensorBinding;
+
+typedef struct
+{
     Uint16 vendor_id;
     Uint16 product_id;
     bool allow_swapped_vid_pid;
@@ -86,6 +109,7 @@ typedef struct
     const char *mapping_string_suffix;
     const SDL_HIDAPI_SimpleReportLayout *layout;
     const SDL_HIDAPI_SimpleRumbleBinding *rumble;
+    const SDL_HIDAPI_SimpleSensorBinding *sensors;
 } SDL_HIDAPI_SimpleDeviceProfile;
 
 /*
@@ -146,14 +170,72 @@ static const SDL_HIDAPI_SimpleRumbleBinding SDL_hidapi_zhidong_rumble_v1 = {
 };
 
 /*
+ * Layout v1 Beitong Zeus 2 (button report)
+ * Byte 8: dpad/menu/view/stick clicks
+ * Byte 9: shoulders and ABXY
+ * Byte 10: guide/misc/back paddles
+ * Byte 2-7: analog axes (LX, LY, RX, RY, LT, RT)
+ */
+static const SDL_HIDAPI_SimpleButtonBinding SDL_hidapi_beitong_layout_v1_buttons[] = {
+    { SDL_GAMEPAD_BUTTON_START,          8, 0x10 },
+    { SDL_GAMEPAD_BUTTON_BACK,           8, 0x20 },
+    { SDL_GAMEPAD_BUTTON_LEFT_STICK,     8, 0x40 },
+    { SDL_GAMEPAD_BUTTON_RIGHT_STICK,    8, 0x80 },
+
+    { SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,  9, 0x01 },
+    { SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, 9, 0x02 },
+    { SDL_GAMEPAD_BUTTON_SOUTH,          9, 0x10 },
+    { SDL_GAMEPAD_BUTTON_EAST,           9, 0x20 },
+    { SDL_GAMEPAD_BUTTON_WEST,           9, 0x40 },
+    { SDL_GAMEPAD_BUTTON_NORTH,          9, 0x80 },
+
+    { SDL_GAMEPAD_BUTTON_GUIDE,          10, 0x40 },
+    { SDL_GAMEPAD_BUTTON_MISC2,          10, 0x20 },
+    { SDL_GAMEPAD_BUTTON_MISC3,          10, 0x10 },
+    { SDL_GAMEPAD_BUTTON_LEFT_PADDLE1,   10, 0x04 },
+    { SDL_GAMEPAD_BUTTON_LEFT_PADDLE2,   10, 0x08 },
+    { SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1,  10, 0x01 },
+    { SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2,  10, 0x02 },
+};
+
+static const SDL_HIDAPI_SimpleAxisBinding SDL_hidapi_beitong_layout_v1_axes[] = {
+    { SDL_GAMEPAD_AXIS_LEFTX,         2, SDL_HIDAPI_AXIS_ENCODING_STICK_8BIT_CENTER_0x80, false },
+    { SDL_GAMEPAD_AXIS_LEFTY,         3, SDL_HIDAPI_AXIS_ENCODING_STICK_8BIT_CENTER_0x80, true },
+    { SDL_GAMEPAD_AXIS_RIGHTX,        4, SDL_HIDAPI_AXIS_ENCODING_STICK_8BIT_CENTER_0x80, false },
+    { SDL_GAMEPAD_AXIS_RIGHTY,        5, SDL_HIDAPI_AXIS_ENCODING_STICK_8BIT_CENTER_0x80, true },
+    { SDL_GAMEPAD_AXIS_LEFT_TRIGGER,  6, SDL_HIDAPI_AXIS_ENCODING_TRIGGER_8BIT_0_255, false },
+    { SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, 7, SDL_HIDAPI_AXIS_ENCODING_TRIGGER_8BIT_0_255, false },
+};
+
+static const SDL_HIDAPI_SimpleReportLayout SDL_hidapi_beitong_layout_v1 = {
+    11,
+    { 8, 0x01, 0x02, 0x04, 0x08 },
+    SDL_hidapi_beitong_layout_v1_buttons,
+    (int)SDL_arraysize(SDL_hidapi_beitong_layout_v1_buttons),
+    SDL_hidapi_beitong_layout_v1_axes,
+    (int)SDL_arraysize(SDL_hidapi_beitong_layout_v1_axes),
+};
+
+static const SDL_HIDAPI_SimpleSensorBinding SDL_hidapi_beitong_sensor_v1 = {
+    5,      // IMU collection (Col05 on Windows/GDK)
+    13,     // report size minimum
+    1,      // gyro starts at byte[1]
+    7,      // accel starts at byte[7]
+    500.0f, // report rate
+    (2.0f * SDL_STANDARD_GRAVITY) / 32768.0f,
+    ((float)(SDL_PI_F / 180.0f)) / 16.0f,
+};
+
+/*
  * Controller profiles.
  * The first 4 entries intentionally keep the existing device display name.
  */
 static const SDL_HIDAPI_SimpleDeviceProfile SDL_hidapi_simple_profiles[] = {
-    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1 },
-    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1 },
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1 },
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1 },
+    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1, NULL },
+    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1, NULL },
+    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1, NULL },
+    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &SDL_hidapi_zhidong_layout_v1, &SDL_hidapi_zhidong_rumble_v1, NULL },
+    { USB_VENDOR_BEITONG, USB_PRODUCT_BEITONG_ZEUS2, false, 4, "Beitong Zeus 2", "paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &SDL_hidapi_beitong_layout_v1, NULL, &SDL_hidapi_beitong_sensor_v1 },
 };
 
 static inline bool HIDAPI_Simple_ProfileMatchesVIDPID(const SDL_HIDAPI_SimpleDeviceProfile *profile, Uint16 vendor_id, Uint16 product_id)
