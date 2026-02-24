@@ -49,6 +49,52 @@ typedef struct
     Uint8 last_state[USB_PACKET_LENGTH];
 } SDL_DriverSimpleProfile_Context;
 
+static bool HIDAPI_Simple_ProfileMatchesVIDPID(const SDL_HIDAPI_SimpleDeviceProfile *profile, Uint16 vendor_id, Uint16 product_id)
+{
+    if (!profile) {
+        return false;
+    }
+
+    if (profile->vendor_id == vendor_id && profile->product_id == product_id) {
+        return true;
+    }
+
+    if (profile->allow_swapped_vid_pid &&
+        profile->vendor_id == product_id && profile->product_id == vendor_id) {
+        return true;
+    }
+
+    return false;
+}
+
+const SDL_HIDAPI_SimpleDeviceProfile *HIDAPI_Simple_GetDeviceProfile(Uint16 vendor_id, Uint16 product_id)
+{
+    int i;
+
+    for (i = 0; i < (int)SDL_arraysize(SDL_hidapi_simple_profiles); ++i) {
+        const SDL_HIDAPI_SimpleDeviceProfile *profile = &SDL_hidapi_simple_profiles[i];
+        if (HIDAPI_Simple_ProfileMatchesVIDPID(profile, vendor_id, product_id)) {
+            return profile;
+        }
+    }
+
+    return NULL;
+}
+
+bool HIDAPI_Simple_IsSupportedVIDPID(Uint16 vendor_id, Uint16 product_id)
+{
+    return (HIDAPI_Simple_GetDeviceProfile(vendor_id, product_id) != NULL);
+}
+
+const char *HIDAPI_Simple_GetMappingStringSuffix(Uint16 vendor_id, Uint16 product_id)
+{
+    const SDL_HIDAPI_SimpleDeviceProfile *profile = HIDAPI_Simple_GetDeviceProfile(vendor_id, product_id);
+    if (!profile) {
+        return NULL;
+    }
+    return profile->mapping_string_suffix;
+}
+
 static void HIDAPI_DriverSimpleProfile_RegisterHints(SDL_HintCallback callback, void *userdata)
 {
     SDL_AddHintCallback(SDL_HINT_JOYSTICK_HIDAPI_SIMPLE_PROFILE, callback, userdata);
@@ -471,12 +517,13 @@ static Sint16 HIDAPI_DriverSimpleProfile_DecodeAxis(const SDL_HIDAPI_SimpleAxisB
 static void HIDAPI_DriverSimpleProfile_HandleStatePacket(SDL_Joystick *joystick, SDL_DriverSimpleProfile_Context *ctx, const Uint8 *data, int size)
 {
     const SDL_HIDAPI_SimpleReportLayout *layout = ctx->profile ? ctx->profile->layout : NULL;
+    const SDL_HIDAPI_SimpleTriggerOverrideBinding *trigger_override = ctx->profile ? ctx->profile->trigger_override : NULL;
     Uint64 timestamp = SDL_GetTicksNS();
     const bool initial = !ctx->last_state_initialized;
     const Uint8 *last = ctx->last_state;
     int i;
 
-    if (!layout || size < layout->report_size_min) {
+    if (!layout) {
         return;
     }
 
@@ -501,12 +548,42 @@ static void HIDAPI_DriverSimpleProfile_HandleStatePacket(SDL_Joystick *joystick,
     for (i = 0; i < layout->num_axes; ++i) {
         const SDL_HIDAPI_SimpleAxisBinding *binding = &layout->axes[i];
         Uint8 byte_index = binding->byte_index;
+        bool changed;
+        Uint8 raw_value;
 
         if (byte_index >= size) {
             continue;
         }
-        if (initial || last[byte_index] != data[byte_index]) {
-            Sint16 axis = HIDAPI_DriverSimpleProfile_DecodeAxis(binding, data[byte_index]);
+        changed = (initial || last[byte_index] != data[byte_index]);
+        raw_value = data[byte_index];
+
+        /* Some controllers expose a trigger end-stop switch in the button bits.
+         * When pressed, force the corresponding trigger axis to full travel.
+         */
+        if (trigger_override && binding->encoding == SDL_HIDAPI_AXIS_ENCODING_TRIGGER_8BIT_0_255) {
+            Uint8 switch_byte = 0;
+            Uint8 switch_mask = 0;
+
+            if (binding->axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER) {
+                switch_byte = trigger_override->left_byte_index;
+                switch_mask = trigger_override->left_mask;
+            } else if (binding->axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) {
+                switch_byte = trigger_override->right_byte_index;
+                switch_mask = trigger_override->right_mask;
+            }
+
+            if (switch_mask != 0 && switch_byte < size) {
+                if ((data[switch_byte] & switch_mask) != 0) {
+                    raw_value = 0xFF;
+                }
+                if (initial || last[switch_byte] != data[switch_byte]) {
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed) {
+            Sint16 axis = HIDAPI_DriverSimpleProfile_DecodeAxis(binding, raw_value);
             SDL_SendJoystickAxis(timestamp, joystick, binding->axis, axis);
         }
     }
@@ -526,9 +603,6 @@ static void HIDAPI_DriverSimpleProfile_HandleSensorPacket(SDL_Joystick *joystick
     Sint16 gyro_x, gyro_y, gyro_z;
 
     if (!sensors || !ctx->sensors_enabled) {
-        return;
-    }
-    if (size < sensors->report_size_min) {
         return;
     }
     if ((sensors->gyro_offset + 5) >= size || (sensors->accel_offset + 5) >= size) {
