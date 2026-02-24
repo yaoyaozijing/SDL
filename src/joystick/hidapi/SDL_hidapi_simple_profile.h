@@ -44,6 +44,8 @@ typedef struct
 {
     const Uint8 *packet_data;
     Uint8 packet_size;
+    Uint8 low_frequency_byte_index;
+    Uint8 high_frequency_byte_index;
 } SDL_HIDAPI_SimpleRumbleBinding;
 
 typedef struct

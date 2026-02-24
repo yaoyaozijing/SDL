@@ -48,19 +48,10 @@ static const SDL_HIDAPI_SimpleReportLayout Zhidong_S_layout = {
     Zhidong_S_layout_axes, (int)SDL_arraysize(Zhidong_S_layout_axes),
 };
 
-static const Uint8 Zhidong_S_rumble_packet[] = {
-    0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-static const SDL_HIDAPI_SimpleRumbleBinding Zhidong_S_rumble = {
-    Zhidong_S_rumble_packet,
-    (Uint8)SDL_arraysize(Zhidong_S_rumble_packet)
-};
-
 #define SDL_HIDAPI_SIMPLE_PROFILE_CONTROLLER_ENTRIES_ZHIDONG \
-    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, NULL }, \
-    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, NULL }, \
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, NULL }, \
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, NULL },
+    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, NULL, NULL }, \
+    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, NULL, NULL }, \
+    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, NULL, NULL }, \
+    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, NULL, NULL },
 
 #endif
