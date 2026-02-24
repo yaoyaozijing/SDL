@@ -55,16 +55,7 @@ static bool HIDAPI_Simple_ProfileMatchesVIDPID(const SDL_HIDAPI_SimpleDeviceProf
         return false;
     }
 
-    if (profile->vendor_id == vendor_id && profile->product_id == product_id) {
-        return true;
-    }
-
-    if (profile->allow_swapped_vid_pid &&
-        profile->vendor_id == product_id && profile->product_id == vendor_id) {
-        return true;
-    }
-
-    return false;
+    return (profile->vendor_id == vendor_id && profile->product_id == product_id);
 }
 
 const SDL_HIDAPI_SimpleDeviceProfile *HIDAPI_Simple_GetDeviceProfile(Uint16 vendor_id, Uint16 product_id)

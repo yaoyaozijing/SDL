@@ -63,9 +63,9 @@ static const SDL_HIDAPI_SimpleTriggerOverrideBinding SDL_hidapi_zhidong_trigger_
 };
 
 #define SDL_HIDAPI_SIMPLE_PROFILE_CONTROLLER_ENTRIES_ZHIDONG \
-    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, &SDL_hidapi_zhidong_trigger_override_v1, NULL }, \
-    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, &SDL_hidapi_zhidong_trigger_override_v1, NULL }, \
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, &SDL_hidapi_zhidong_trigger_override_v1, NULL }, \
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, true, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, &SDL_hidapi_zhidong_trigger_override_v1, NULL },
+    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, &SDL_hidapi_zhidong_trigger_override_v1, NULL }, \
+    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, &SDL_hidapi_zhidong_trigger_override_v1, NULL }, \
+    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, &SDL_hidapi_zhidong_trigger_override_v1, NULL }, \
+    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle2:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, &Zhidong_S_rumble, &SDL_hidapi_zhidong_trigger_override_v1, NULL },
 
 #endif

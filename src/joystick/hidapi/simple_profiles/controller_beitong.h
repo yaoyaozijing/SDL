@@ -51,6 +51,6 @@ static const SDL_HIDAPI_SimpleSensorBinding Beitong_Zeus2_sensor = {
 };
 
 #define SDL_HIDAPI_SIMPLE_PROFILE_CONTROLLER_ENTRIES_BEITONG \
-    { USB_VENDOR_BEITONG, USB_PRODUCT_BEITONG_ZEUS2, false, 4, "Beitong Zeus 2", "paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &Beitong_Zeus2_layout, NULL, NULL, &Beitong_Zeus2_sensor },
+    { USB_VENDOR_BEITONG, USB_PRODUCT_BEITONG_ZEUS2, 4, "Beitong Zeus 2", "paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &Beitong_Zeus2_layout, NULL, NULL, &Beitong_Zeus2_sensor },
 
 #endif

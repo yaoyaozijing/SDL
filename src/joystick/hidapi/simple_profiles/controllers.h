@@ -5,7 +5,6 @@ typedef struct
 {
     Uint16 vendor_id;
     Uint16 product_id;
-    bool allow_swapped_vid_pid;
     int collection;
     const char *name;
     const char *mapping_string_suffix;
