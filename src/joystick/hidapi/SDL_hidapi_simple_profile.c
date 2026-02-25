@@ -471,6 +471,11 @@ static Sint16 HIDAPI_DriverSimpleProfile_DecodeAxis(const SDL_HIDAPI_SimpleAxisB
     return value;
 }
 
+static Sint16 HIDAPI_DriverSimpleProfile_InvertAxisValue(Sint16 value)
+{
+    return (value == SDL_MIN_SINT16) ? SDL_MAX_SINT16 : (Sint16)-value;
+}
+
 static bool HIDAPI_DriverSimpleProfile_IsTouchpadAxisBytesValid(Uint8 high_byte_index, Uint8 low_byte_index, int size)
 {
     if (low_byte_index >= size) {
@@ -776,6 +781,26 @@ static void HIDAPI_DriverSimpleProfile_HandleSensorPacket(SDL_Joystick *joystick
     accel_x = LOAD16(data[sensors->accel_x_byte_index + 0], data[sensors->accel_x_byte_index + 1]);
     accel_y = LOAD16(data[sensors->accel_y_byte_index + 0], data[sensors->accel_y_byte_index + 1]);
     accel_z = LOAD16(data[sensors->accel_z_byte_index + 0], data[sensors->accel_z_byte_index + 1]);
+
+    if (sensors->accel_invert_axes & SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_X) {
+        accel_x = HIDAPI_DriverSimpleProfile_InvertAxisValue(accel_x);
+    }
+    if (sensors->accel_invert_axes & SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_Y) {
+        accel_y = HIDAPI_DriverSimpleProfile_InvertAxisValue(accel_y);
+    }
+    if (sensors->accel_invert_axes & SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_Z) {
+        accel_z = HIDAPI_DriverSimpleProfile_InvertAxisValue(accel_z);
+    }
+
+    if (sensors->gyro_invert_axes & SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_X) {
+        gyro_x = HIDAPI_DriverSimpleProfile_InvertAxisValue(gyro_x);
+    }
+    if (sensors->gyro_invert_axes & SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_Y) {
+        gyro_y = HIDAPI_DriverSimpleProfile_InvertAxisValue(gyro_y);
+    }
+    if (sensors->gyro_invert_axes & SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_Z) {
+        gyro_z = HIDAPI_DriverSimpleProfile_InvertAxisValue(gyro_z);
+    }
 
     values[0] = (float)accel_x * sensors->accel_scale;
     values[1] = (float)accel_y * sensors->accel_scale;

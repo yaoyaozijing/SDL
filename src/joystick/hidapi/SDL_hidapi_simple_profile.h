@@ -77,9 +77,14 @@ typedef struct
     float report_rate_hz;
     float accel_scale;
     float gyro_scale;
+    Uint8 accel_invert_axes;    /* SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_* */
+    Uint8 gyro_invert_axes;     /* SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_* */
 } SDL_HIDAPI_SimpleSensorBinding;
 
 #define SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE 0xFF
+#define SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_X 0x01
+#define SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_Y 0x02
+#define SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_Z 0x04
 
 typedef struct
 {
