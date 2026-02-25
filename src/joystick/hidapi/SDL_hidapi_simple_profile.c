@@ -709,6 +709,7 @@ static void HIDAPI_DriverSimpleProfile_HandleSensorPacket(SDL_Joystick *joystick
     const SDL_HIDAPI_SimpleSensorBinding *sensors = ctx->profile ? ctx->profile->sensors : NULL;
     Uint64 timestamp;
     Uint64 sensor_timestamp;
+    float sample_interval_ns = 0.0f;
     bool has_report_counter = false;
     Uint8 report_counter = 0;
     float values[3];
@@ -730,6 +731,9 @@ static void HIDAPI_DriverSimpleProfile_HandleSensorPacket(SDL_Joystick *joystick
         (sensors->accel_x_byte_index + 1) >= size || (sensors->accel_y_byte_index + 1) >= size || (sensors->accel_z_byte_index + 1) >= size) {
         return;
     }
+    if (sensors->report_rate_hz > 0.0f) {
+        sample_interval_ns = 1000000000.0f / sensors->report_rate_hz;
+    }
     if (sensors->timestamp_byte_index != SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE &&
         sensors->timestamp_byte_index < size &&
         sensors->report_rate_hz > 0.0f) {
@@ -746,7 +750,6 @@ static void HIDAPI_DriverSimpleProfile_HandleSensorPacket(SDL_Joystick *joystick
         if (ctx->sensor_report_counter_initialized) {
             Uint8 delta = (Uint8)(report_counter - ctx->sensor_report_counter);
             if (delta > 0) {
-                float sample_interval_ns = 1000000000.0f / sensors->report_rate_hz;
                 sensor_timestamp += (Uint64)((float)delta * sample_interval_ns);
             }
         }
@@ -758,7 +761,13 @@ static void HIDAPI_DriverSimpleProfile_HandleSensorPacket(SDL_Joystick *joystick
         if (!sensor_timestamp) {
             sensor_timestamp = timestamp;
         }
-        ctx->sensor_timestamp_ns = timestamp;
+        if (sample_interval_ns > 0.0f) {
+            // Simulate the controller sensor clock using the known report cadence.
+            ctx->sensor_timestamp_ns = sensor_timestamp + (Uint64)sample_interval_ns;
+        } else {
+            // Fallback for profiles without a valid report rate.
+            ctx->sensor_timestamp_ns = timestamp;
+        }
     }
 
     gyro_x = LOAD16(data[sensors->gyro_x_byte_index + 0], data[sensors->gyro_x_byte_index + 1]);
