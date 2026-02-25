@@ -26,9 +26,6 @@
 #include "../SDL_sysjoystick.h"
 #include "SDL_hidapijoystick_c.h"
 #include "SDL_hidapi_rumble.h"
-#ifdef SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE
-#include "SDL_hidapi_simple_profile.h"
-#endif
 
 #ifdef SDL_JOYSTICK_HIDAPI_PS3
 
@@ -166,8 +163,7 @@ static bool HIDAPI_DriverPS3_InitDevice(SDL_HIDAPI_Device *device)
         SDL_strncasecmp(device->name, "ShanWan", 7) == 0) {
         is_shanwan = true;
     }
-    if (device->vendor_id == USB_VENDOR_SHANWAN ||
-        device->vendor_id == USB_VENDOR_SHANWAN_ALT) {
+    if (device->vendor_id == USB_VENDOR_SHANWAN) {
         is_shanwan = true;
     }
 
@@ -624,12 +620,6 @@ static bool HIDAPI_DriverPS3ThirdParty_IsSupportedDevice(SDL_HIDAPI_Device *devi
 {
     Uint8 data[USB_PACKET_LENGTH];
     int size;
-
-#ifdef SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE
-    if (HIDAPI_Simple_IsSupportedVIDPID(vendor_id, product_id)) {
-        return false;
-    }
-#endif
 
     if (vendor_id == USB_VENDOR_LOGITECH &&
         product_id == USB_PRODUCT_LOGITECH_CHILLSTREAM) {
