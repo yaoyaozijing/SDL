@@ -551,6 +551,9 @@ static void HIDAPI_DriverSimpleProfile_HandleTouchpadPacket(SDL_Joystick *joysti
         Uint16 x_resolution = touchpad->x_resolution;
         Uint16 y_resolution = touchpad->y_resolution;
         bool down;
+        bool previous_down;
+        float normalized_x;
+        float normalized_y;
         Uint16 x;
         Uint16 y;
 
@@ -576,11 +579,26 @@ static void HIDAPI_DriverSimpleProfile_HandleTouchpadPacket(SDL_Joystick *joysti
         }
 
         down = (((data[down_byte_index] & down_mask) != 0) == (down_value != 0));
+        previous_down = initial ? false : ((((last[down_byte_index] & down_mask) != 0) == (down_value != 0)));
+        normalized_x = HIDAPI_DriverSimpleProfile_NormalizeTouchpadCoordinate(x, x_resolution);
+        normalized_y = HIDAPI_DriverSimpleProfile_NormalizeTouchpadCoordinate(y, y_resolution);
 
-        SDL_SendJoystickTouchpad(timestamp, joystick, touchpad_index, 0, down,
-                                 HIDAPI_DriverSimpleProfile_NormalizeTouchpadCoordinate(x, x_resolution),
-                                 HIDAPI_DriverSimpleProfile_NormalizeTouchpadCoordinate(y, y_resolution),
-                                 down ? 1.0f : 0.0f);
+        /* Keep reporting coordinates even when the physical "down" bit is not set. */
+        if (!down) {
+            if (previous_down) {
+                /* Physical transition 1->0 must generate an UP event. */
+                SDL_SendJoystickTouchpad(timestamp, joystick, touchpad_index, 0, false,
+                                         normalized_x, normalized_y, 0.0f);
+            } else {
+                SDL_SendJoystickTouchpad(timestamp, joystick, touchpad_index, 0, true,
+                                         normalized_x, normalized_y, 0.0f);
+            }
+            continue;
+        }
+
+        /* In hover mode we keep the finger logically down to allow motion events. */
+        SDL_SendJoystickTouchpad(timestamp, joystick, touchpad_index, 0, true,
+                                 normalized_x, normalized_y, 1.0f);
     }
 }
 

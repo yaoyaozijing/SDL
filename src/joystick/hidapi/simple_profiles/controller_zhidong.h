@@ -49,18 +49,16 @@ static const SDL_HIDAPI_SimpleReportLayout Zhidong_S_layout = {
 };
 
 static const SDL_HIDAPI_SimpleTouchpadBinding Zhidong_S_touchpads[] = {
-    /* Touchpad 0 -> Left Stick */
     SDL_HIDAPI_SIMPLE_TOUCHPAD_BINDING(
         3, 0x40, 1,
-        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 6,  /* X = LeftX */
-        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 7,  /* Y = LeftY */
+        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 6,
+        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 7,
         255, 255
     ),
-    /* Touchpad 1 -> Right Stick */
     SDL_HIDAPI_SIMPLE_TOUCHPAD_BINDING(
         4, 0x02, 1,
-        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 8,  /* X = RightX */
-        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 9,  /* Y = RightY */
+        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 8,
+        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 9,
         255, 255
     ),
 };
