@@ -18,9 +18,11 @@ typedef struct
 } SDL_HIDAPI_SimpleDeviceProfile;
 
 #include "controller_beitong.h"
+#include "controller_legiongo.h"
 #include "controller_zhidong.h"
 
 static const SDL_HIDAPI_SimpleDeviceProfile SDL_hidapi_simple_profiles[] = {
+    SDL_HIDAPI_SIMPLE_PROFILE_CONTROLLER_ENTRIES_LEGIONGO
     SDL_HIDAPI_SIMPLE_PROFILE_CONTROLLER_ENTRIES_ZHIDONG
     SDL_HIDAPI_SIMPLE_PROFILE_CONTROLLER_ENTRIES_BEITONG
 };

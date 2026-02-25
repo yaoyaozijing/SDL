@@ -44,6 +44,8 @@ typedef struct
     SDL_hid_device *sensor_input_handle;
     bool sensors_enabled;
     Uint64 sensor_timestamp_ns;
+    Uint8 sensor_report_counter;
+    bool sensor_report_counter_initialized;
     bool last_state_initialized;
     Uint8 last_state[USB_PACKET_LENGTH];
 } SDL_DriverSimpleProfile_Context;
@@ -279,8 +281,8 @@ static bool HIDAPI_DriverSimpleProfile_OpenJoystick(SDL_HIDAPI_Device *device, S
         for (i = 0; i < num_touchpads; ++i) {
             if (HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(touchpads[i].x_high_byte_index, touchpads[i].x_high_byte_mask, touchpads[i].x_low_byte_index) &&
                 HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(touchpads[i].y_high_byte_index, touchpads[i].y_high_byte_mask, touchpads[i].y_low_byte_index) &&
-                touchpads[i].pressure_mask != 0 &&
                 touchpads[i].pressure_value <= 1 &&
+                (touchpads[i].pressure_mask == 0 || touchpads[i].pressure_byte_index != SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE) &&
                 touchpads[i].x_resolution > 0 &&
                 touchpads[i].y_resolution > 0) {
                 SDL_PrivateJoystickAddTouchpad(joystick, 1);
@@ -295,6 +297,8 @@ static bool HIDAPI_DriverSimpleProfile_OpenJoystick(SDL_HIDAPI_Device *device, S
         /* Keep sensor stream active by default so test tools can read data immediately. */
         ctx->sensors_enabled = true;
         ctx->sensor_timestamp_ns = SDL_GetTicksNS();
+        ctx->sensor_report_counter = 0;
+        ctx->sensor_report_counter_initialized = false;
         joystick->nsensors_enabled = joystick->nsensors;
         for (i = 0; i < joystick->nsensors; ++i) {
             joystick->sensors[i].enabled = true;
@@ -398,6 +402,8 @@ static bool HIDAPI_DriverSimpleProfile_SetJoystickSensorsEnabled(SDL_HIDAPI_Devi
     ctx->sensors_enabled = enabled;
     if (enabled) {
         ctx->sensor_timestamp_ns = SDL_GetTicksNS();
+        ctx->sensor_report_counter = 0;
+        ctx->sensor_report_counter_initialized = false;
     }
     return true;
 }
@@ -489,12 +495,13 @@ static bool HIDAPI_DriverSimpleProfile_IsTouchpadAxisChanged(const Uint8 *last, 
     return false;
 }
 
-static bool HIDAPI_DriverSimpleProfile_IsTouchpadChanged(const Uint8 *last, const Uint8 *data, bool initial, Uint8 pressure_byte_index, const SDL_HIDAPI_SimpleTouchpadBinding *touchpad)
+static bool HIDAPI_DriverSimpleProfile_IsTouchpadChanged(const Uint8 *last, const Uint8 *data, bool initial, Uint8 pressure_byte_index, Uint8 pressure_mask, const SDL_HIDAPI_SimpleTouchpadBinding *touchpad)
 {
     if (initial) {
         return true;
     }
-    if (last[pressure_byte_index] != data[pressure_byte_index]) {
+    if (pressure_mask != 0 &&
+        ((last[pressure_byte_index] & pressure_mask) != (data[pressure_byte_index] & pressure_mask))) {
         return true;
     }
     if (HIDAPI_DriverSimpleProfile_IsTouchpadAxisChanged(last, data, touchpad->x_high_byte_index, touchpad->x_high_byte_mask, touchpad->x_low_byte_index)) {
@@ -568,18 +575,18 @@ static void HIDAPI_DriverSimpleProfile_HandleTouchpadPacket(SDL_Joystick *joysti
 
         if (!HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(x_high_byte_index, x_high_byte_mask, x_low_byte_index) ||
             !HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(y_high_byte_index, y_high_byte_mask, y_low_byte_index) ||
-            pressure_mask == 0 ||
             pressure_value > 1 ||
+            (pressure_mask != 0 && pressure_byte_index == SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE) ||
             x_resolution == 0 || y_resolution == 0) {
             continue;
         }
 
-        if (pressure_byte_index >= size ||
+        if ((pressure_mask != 0 && pressure_byte_index >= size) ||
             !HIDAPI_DriverSimpleProfile_IsTouchpadAxisBytesValid(x_high_byte_index, x_low_byte_index, size) ||
             !HIDAPI_DriverSimpleProfile_IsTouchpadAxisBytesValid(y_high_byte_index, y_low_byte_index, size)) {
             continue;
         }
-        if (!HIDAPI_DriverSimpleProfile_IsTouchpadChanged(last, data, initial, pressure_byte_index, touchpad)) {
+        if (!HIDAPI_DriverSimpleProfile_IsTouchpadChanged(last, data, initial, pressure_byte_index, pressure_mask, touchpad)) {
             continue;
         }
         if (!HIDAPI_DriverSimpleProfile_DecodeTouchpadAxis(data, size, x_high_byte_index, x_high_byte_mask, x_low_byte_index, &x) ||
@@ -588,7 +595,12 @@ static void HIDAPI_DriverSimpleProfile_HandleTouchpadPacket(SDL_Joystick *joysti
         }
 
         touch_active = (x != 0 || y != 0);
-        pressure_on = (((data[pressure_byte_index] & pressure_mask) != 0) == (pressure_value != 0));
+        if (pressure_mask != 0) {
+            pressure_on = (((data[pressure_byte_index] & pressure_mask) != 0) == (pressure_value != 0));
+        } else {
+            /* Device has no pressure capability: keep active touch at full normalized pressure. */
+            pressure_on = true;
+        }
         pressure = pressure_on ? 1.0f : 0.0f;
         normalized_x = HIDAPI_DriverSimpleProfile_NormalizeTouchpadCoordinate(x, x_resolution);
         normalized_y = HIDAPI_DriverSimpleProfile_NormalizeTouchpadCoordinate(y, y_resolution);
@@ -697,6 +709,8 @@ static void HIDAPI_DriverSimpleProfile_HandleSensorPacket(SDL_Joystick *joystick
     const SDL_HIDAPI_SimpleSensorBinding *sensors = ctx->profile ? ctx->profile->sensors : NULL;
     Uint64 timestamp;
     Uint64 sensor_timestamp;
+    bool has_report_counter = false;
+    Uint8 report_counter = 0;
     float values[3];
     Sint16 accel_x, accel_y, accel_z;
     Sint16 gyro_x, gyro_y, gyro_z;
@@ -704,23 +718,55 @@ static void HIDAPI_DriverSimpleProfile_HandleSensorPacket(SDL_Joystick *joystick
     if (!sensors || !ctx->sensors_enabled) {
         return;
     }
-    if ((sensors->gyro_offset + 5) >= size || (sensors->accel_offset + 5) >= size) {
+    if (sensors->gyro_x_byte_index == SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE ||
+        sensors->gyro_y_byte_index == SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE ||
+        sensors->gyro_z_byte_index == SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE ||
+        sensors->accel_x_byte_index == SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE ||
+        sensors->accel_y_byte_index == SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE ||
+        sensors->accel_z_byte_index == SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE) {
         return;
+    }
+    if ((sensors->gyro_x_byte_index + 1) >= size || (sensors->gyro_y_byte_index + 1) >= size || (sensors->gyro_z_byte_index + 1) >= size ||
+        (sensors->accel_x_byte_index + 1) >= size || (sensors->accel_y_byte_index + 1) >= size || (sensors->accel_z_byte_index + 1) >= size) {
+        return;
+    }
+    if (sensors->timestamp_byte_index != SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE &&
+        sensors->timestamp_byte_index < size &&
+        sensors->report_rate_hz > 0.0f) {
+        has_report_counter = true;
+        report_counter = data[sensors->timestamp_byte_index];
     }
 
     timestamp = SDL_GetTicksNS();
-    sensor_timestamp = ctx->sensor_timestamp_ns;
-    if (!sensor_timestamp) {
-        sensor_timestamp = timestamp;
+    if (has_report_counter) {
+        sensor_timestamp = ctx->sensor_timestamp_ns;
+        if (!sensor_timestamp) {
+            sensor_timestamp = timestamp;
+        }
+        if (ctx->sensor_report_counter_initialized) {
+            Uint8 delta = (Uint8)(report_counter - ctx->sensor_report_counter);
+            if (delta > 0) {
+                float sample_interval_ns = 1000000000.0f / sensors->report_rate_hz;
+                sensor_timestamp += (Uint64)((float)delta * sample_interval_ns);
+            }
+        }
+        ctx->sensor_report_counter = report_counter;
+        ctx->sensor_report_counter_initialized = true;
+        ctx->sensor_timestamp_ns = sensor_timestamp;
+    } else {
+        sensor_timestamp = ctx->sensor_timestamp_ns;
+        if (!sensor_timestamp) {
+            sensor_timestamp = timestamp;
+        }
+        ctx->sensor_timestamp_ns = timestamp;
     }
-    ctx->sensor_timestamp_ns = timestamp;
 
-    gyro_x = LOAD16(data[sensors->gyro_offset + 0], data[sensors->gyro_offset + 1]);
-    gyro_y = LOAD16(data[sensors->gyro_offset + 2], data[sensors->gyro_offset + 3]);
-    gyro_z = LOAD16(data[sensors->gyro_offset + 4], data[sensors->gyro_offset + 5]);
-    accel_x = LOAD16(data[sensors->accel_offset + 0], data[sensors->accel_offset + 1]);
-    accel_y = LOAD16(data[sensors->accel_offset + 2], data[sensors->accel_offset + 3]);
-    accel_z = LOAD16(data[sensors->accel_offset + 4], data[sensors->accel_offset + 5]);
+    gyro_x = LOAD16(data[sensors->gyro_x_byte_index + 0], data[sensors->gyro_x_byte_index + 1]);
+    gyro_y = LOAD16(data[sensors->gyro_y_byte_index + 0], data[sensors->gyro_y_byte_index + 1]);
+    gyro_z = LOAD16(data[sensors->gyro_z_byte_index + 0], data[sensors->gyro_z_byte_index + 1]);
+    accel_x = LOAD16(data[sensors->accel_x_byte_index + 0], data[sensors->accel_x_byte_index + 1]);
+    accel_y = LOAD16(data[sensors->accel_y_byte_index + 0], data[sensors->accel_y_byte_index + 1]);
+    accel_z = LOAD16(data[sensors->accel_z_byte_index + 0], data[sensors->accel_z_byte_index + 1]);
 
     values[0] = (float)accel_x * sensors->accel_scale;
     values[1] = (float)accel_y * sensors->accel_scale;
@@ -736,6 +782,7 @@ static void HIDAPI_DriverSimpleProfile_HandleSensorPacket(SDL_Joystick *joystick
 static bool HIDAPI_DriverSimpleProfile_UpdateDevice(SDL_HIDAPI_Device *device)
 {
     SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
+    const SDL_HIDAPI_SimpleSensorBinding *sensors = (ctx && ctx->profile) ? ctx->profile->sensors : NULL;
     SDL_Joystick *joystick = NULL;
     Uint8 data[USB_PACKET_LENGTH];
     int size = 0;
@@ -753,6 +800,9 @@ static bool HIDAPI_DriverSimpleProfile_UpdateDevice(SDL_HIDAPI_Device *device)
             continue;
         }
         HIDAPI_DriverSimpleProfile_HandleStatePacket(joystick, ctx, data, size);
+        if (sensors && sensors->collection <= 0) {
+            HIDAPI_DriverSimpleProfile_HandleSensorPacket(joystick, ctx, data, size);
+        }
     }
 
     if (ctx->sensor_input_handle && joystick) {

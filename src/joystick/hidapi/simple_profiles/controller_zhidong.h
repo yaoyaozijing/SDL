@@ -10,6 +10,8 @@
 #define USB_PRODUCT_ZHIDONG_24G_XINPUT 0xe023
 #define USB_PRODUCT_ZHIDONG_24G_DINPUT 0xe024
 
+#define ZHIDONG_MAPPING_SUFFIX "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,"
+
 static const SDL_HIDAPI_SimpleButtonBinding Zhidong_S_layout_buttons[] = {
     { SDL_GAMEPAD_BUTTON_BACK,           4, 0x04 },
     { SDL_GAMEPAD_BUTTON_START,          4, 0x08 },
@@ -64,9 +66,9 @@ static const SDL_HIDAPI_SimpleTouchpadBinding Zhidong_S_touchpads[] = {
 };
 
 #define SDL_HIDAPI_SIMPLE_PROFILE_CONTROLLER_ENTRIES_ZHIDONG \
-    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, NULL, NULL, Zhidong_S_touchpads, 2, NULL, NULL }, \
-    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, NULL, NULL, NULL, 0, NULL, NULL }, \
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, NULL, NULL, NULL, 0, NULL, NULL }, \
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, 2, "Zhidong Controller", "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,", &Zhidong_S_layout, NULL, NULL, NULL, 0, NULL, NULL },
+    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, 2, "Zhidong Controller", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, NULL, NULL, Zhidong_S_touchpads, 2, NULL, NULL }, \
+    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, 2, "Zhidong Controller", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, NULL, NULL, NULL, 0, NULL, NULL }, \
+    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, 2, "Zhidong Controller", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, NULL, NULL, NULL, 0, NULL, NULL }, \
+    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, 2, "Zhidong Controller", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, NULL, NULL, NULL, 0, NULL, NULL },
 
 #endif

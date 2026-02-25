@@ -67,12 +67,19 @@ typedef struct
 typedef struct
 {
     int collection;
-    Uint8 gyro_offset;
-    Uint8 accel_offset;
+    Uint8 gyro_x_byte_index;
+    Uint8 gyro_y_byte_index;
+    Uint8 gyro_z_byte_index;
+    Uint8 accel_x_byte_index;
+    Uint8 accel_y_byte_index;
+    Uint8 accel_z_byte_index;
+    Uint8 timestamp_byte_index; /* optional sensor report timestamp/counter byte */
     float report_rate_hz;
     float accel_scale;
     float gyro_scale;
 } SDL_HIDAPI_SimpleSensorBinding;
+
+#define SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE 0xFF
 
 typedef struct
 {

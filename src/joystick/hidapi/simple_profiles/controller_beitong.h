@@ -43,8 +43,13 @@ static const SDL_HIDAPI_SimpleReportLayout Beitong_Zeus2_layout = {
 
 static const SDL_HIDAPI_SimpleSensorBinding Beitong_Zeus2_sensor = {
     5,
-    1,
-    7,
+    1,  /* gyro x */
+    3,  /* gyro y */
+    5,  /* gyro z */
+    7,  /* accel x */
+    9,  /* accel y */
+    11, /* accel z */
+    SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE,
     500.0f,
     (2.0f * SDL_STANDARD_GRAVITY) / 32768.0f,
     ((float)(SDL_PI_F / 180.0f)) / 16.0f,
