@@ -18,29 +18,29 @@ static const SDL_HIDAPI_SimpleAxisBinding LegionGo_layout_axes[] = {
 };
 
 static const SDL_HIDAPI_SimpleButtonBinding LegionGo_layout_buttons[] = {
-    /* byte 16: [0x80 -> 0x01] Right, Left, Down, Up, R3, L3, Right panel menu, Home */
-    { SDL_GAMEPAD_BUTTON_RIGHT_STICK,    16, 0x08 },
-    { SDL_GAMEPAD_BUTTON_LEFT_STICK,     16, 0x04 },
-    { SDL_GAMEPAD_BUTTON_MISC1,          16, 0x02 },
-    { SDL_GAMEPAD_BUTTON_GUIDE,          16, 0x01 },
+    /* byte 16: [0x01 -> 0x80] Right, Left, Down, Up, R3, L3, Right panel menu, Home */
+    { SDL_GAMEPAD_BUTTON_RIGHT_STICK,    16, 0x10 },
+    { SDL_GAMEPAD_BUTTON_LEFT_STICK,     16, 0x20 },
+    { SDL_GAMEPAD_BUTTON_MISC1,          16, 0x40 },
+    { SDL_GAMEPAD_BUTTON_GUIDE,          16, 0x80 },
 
-    /* byte 17: [0x80 -> 0x01] RT click, RB, LT click, LB, Y, X, B, A */
-    { SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, 17, 0x40 },
-    { SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,  17, 0x10 },
-    { SDL_GAMEPAD_BUTTON_NORTH,          17, 0x08 },
-    { SDL_GAMEPAD_BUTTON_WEST,           17, 0x04 },
-    { SDL_GAMEPAD_BUTTON_EAST,           17, 0x02 },
-    { SDL_GAMEPAD_BUTTON_SOUTH,          17, 0x01 },
+    /* byte 17: [0x01 -> 0x80] RT click, RB, LT click, LB, Y, X, B, A */
+    { SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, 17, 0x02 },
+    { SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,  17, 0x08 },
+    { SDL_GAMEPAD_BUTTON_NORTH,          17, 0x10 },
+    { SDL_GAMEPAD_BUTTON_WEST,           17, 0x20 },
+    { SDL_GAMEPAD_BUTTON_EAST,           17, 0x40 },
+    { SDL_GAMEPAD_BUTTON_SOUTH,          17, 0x80 },
 
-    /* byte 18: [0x80 -> 0x01] Menu, View, R back2, M2, M1, R back1, L back2, L back1 */
-    { SDL_GAMEPAD_BUTTON_START,          18, 0x80 },
-    { SDL_GAMEPAD_BUTTON_BACK,           18, 0x40 },
-    { SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2,  18, 0x20 },
-    { SDL_GAMEPAD_BUTTON_MISC3,          18, 0x10 },
-    { SDL_GAMEPAD_BUTTON_MISC2,          18, 0x08 },
-    { SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1,  18, 0x04 },
-    { SDL_GAMEPAD_BUTTON_LEFT_PADDLE2,   18, 0x02 },
-    { SDL_GAMEPAD_BUTTON_LEFT_PADDLE1,   18, 0x01 },
+    /* byte 18: [0x01 -> 0x80] Menu, View, R back2, M2, M1, R back1, L back2, L back1 */
+    { SDL_GAMEPAD_BUTTON_START,          18, 0x01 },
+    { SDL_GAMEPAD_BUTTON_BACK,           18, 0x02 },
+    { SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2,  18, 0x04 },
+    { SDL_GAMEPAD_BUTTON_MISC3,          18, 0x08 },
+    { SDL_GAMEPAD_BUTTON_MISC2,          18, 0x10 },
+    { SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1,  18, 0x20 },
+    { SDL_GAMEPAD_BUTTON_LEFT_PADDLE2,   18, 0x40 },
+    { SDL_GAMEPAD_BUTTON_LEFT_PADDLE1,   18, 0x80 },
 
     { SDL_GAMEPAD_BUTTON_MISC4,          19, 0x04 },
     { SDL_GAMEPAD_BUTTON_MISC5,          19, 0x02 },
@@ -70,7 +70,7 @@ static const SDL_HIDAPI_SimpleSensorBinding LegionGo_sensor = {
 };
 
 static const SDL_HIDAPI_SimpleReportLayout LegionGo_layout = {
-    { 16, 0x10, 0x20, 0x40, 0x80 },
+    { 16, 0x08, 0x04, 0x02, 0x01 },
     LegionGo_layout_buttons, (int)SDL_arraysize(LegionGo_layout_buttons),
     LegionGo_layout_axes, (int)SDL_arraysize(LegionGo_layout_axes),
 };
