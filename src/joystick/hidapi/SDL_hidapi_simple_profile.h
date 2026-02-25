@@ -58,6 +58,14 @@ typedef struct
 
 typedef struct
 {
+    Uint8 byte_index;
+} SDL_HIDAPI_SimpleBatteryBinding;
+
+#define SDL_HIDAPI_SIMPLE_BATTERY_BINDING(byte) \
+    { (byte) }
+
+typedef struct
+{
     int collection;
     Uint8 gyro_offset;
     Uint8 accel_offset;
@@ -68,12 +76,14 @@ typedef struct
 
 typedef struct
 {
-    Uint8 down_byte_index;
-    Uint8 down_mask;
-    Uint8 down_value;   // 1 or 0 depending on whether the "down" state is indicated by a bit being set or clear
+    Uint8 pressure_byte_index;
+    Uint8 pressure_mask;
+    Uint8 pressure_value;   // 1 or 0 depending on whether pressure-on is indicated by a bit being set or clear
     Uint8 x_high_byte_index;
+    Uint8 x_high_byte_mask; // masked before packing into high 8 bits
     Uint8 x_low_byte_index;
     Uint8 y_high_byte_index;
+    Uint8 y_high_byte_mask; // masked before packing into high 8 bits
     Uint8 y_low_byte_index;
     Uint16 x_resolution;
     Uint16 y_resolution;
@@ -81,8 +91,8 @@ typedef struct
 
 #define SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE 0xFF
 
-#define SDL_HIDAPI_SIMPLE_TOUCHPAD_BINDING(down_byte, down_mask, down_value, x_high, x_low, y_high, y_low, x_res, y_res) \
-    { (down_byte), (down_mask), (down_value), (x_high), (x_low), (y_high), (y_low), (x_res), (y_res) }
+#define SDL_HIDAPI_SIMPLE_TOUCHPAD_BINDING(pressure_byte, pressure_mask, pressure_value, x_high, x_high_mask, x_low, y_high, y_high_mask, y_low, x_res, y_res) \
+    { (pressure_byte), (pressure_mask), (pressure_value), (x_high), (x_high_mask), (x_low), (y_high), (y_high_mask), (y_low), (x_res), (y_res) }
 
 #include "simple_profiles/controllers.h"
 

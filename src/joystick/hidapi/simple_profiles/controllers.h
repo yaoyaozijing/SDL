@@ -13,6 +13,7 @@ typedef struct
     const SDL_HIDAPI_SimpleTriggerRumbleBinding *trigger_rumble;
     const SDL_HIDAPI_SimpleTouchpadBinding *touchpads;
     int num_touchpads;
+    const SDL_HIDAPI_SimpleBatteryBinding *battery;
     const SDL_HIDAPI_SimpleSensorBinding *sensors;
 } SDL_HIDAPI_SimpleDeviceProfile;
 

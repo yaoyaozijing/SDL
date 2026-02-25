@@ -245,9 +245,12 @@ static void HIDAPI_DriverSimpleProfile_SetDevicePlayerIndex(SDL_HIDAPI_Device *d
 {
 }
 
-static bool HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(Uint8 high_byte_index, Uint8 low_byte_index)
+static bool HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(Uint8 high_byte_index, Uint8 high_byte_mask, Uint8 low_byte_index)
 {
     if (low_byte_index == SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE) {
+        return false;
+    }
+    if (high_byte_index != SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE && high_byte_mask == 0) {
         return false;
     }
     return true;
@@ -274,10 +277,10 @@ static bool HIDAPI_DriverSimpleProfile_OpenJoystick(SDL_HIDAPI_Device *device, S
 
     if (touchpads && num_touchpads > 0) {
         for (i = 0; i < num_touchpads; ++i) {
-            if (HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(touchpads[i].x_high_byte_index, touchpads[i].x_low_byte_index) &&
-                HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(touchpads[i].y_high_byte_index, touchpads[i].y_low_byte_index) &&
-                touchpads[i].down_mask != 0 &&
-                touchpads[i].down_value <= 1 &&
+            if (HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(touchpads[i].x_high_byte_index, touchpads[i].x_high_byte_mask, touchpads[i].x_low_byte_index) &&
+                HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(touchpads[i].y_high_byte_index, touchpads[i].y_high_byte_mask, touchpads[i].y_low_byte_index) &&
+                touchpads[i].pressure_mask != 0 &&
+                touchpads[i].pressure_value <= 1 &&
                 touchpads[i].x_resolution > 0 &&
                 touchpads[i].y_resolution > 0) {
                 SDL_PrivateJoystickAddTouchpad(joystick, 1);
@@ -474,30 +477,30 @@ static bool HIDAPI_DriverSimpleProfile_IsTouchpadAxisBytesValid(Uint8 high_byte_
     return true;
 }
 
-static bool HIDAPI_DriverSimpleProfile_IsTouchpadAxisChanged(const Uint8 *last, const Uint8 *data, Uint8 high_byte_index, Uint8 low_byte_index)
+static bool HIDAPI_DriverSimpleProfile_IsTouchpadAxisChanged(const Uint8 *last, const Uint8 *data, Uint8 high_byte_index, Uint8 high_byte_mask, Uint8 low_byte_index)
 {
     if (last[low_byte_index] != data[low_byte_index]) {
         return true;
     }
     if (high_byte_index != SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE &&
-        last[high_byte_index] != data[high_byte_index]) {
+        ((last[high_byte_index] & high_byte_mask) != (data[high_byte_index] & high_byte_mask))) {
         return true;
     }
     return false;
 }
 
-static bool HIDAPI_DriverSimpleProfile_IsTouchpadChanged(const Uint8 *last, const Uint8 *data, bool initial, Uint8 down_byte_index, const SDL_HIDAPI_SimpleTouchpadBinding *touchpad)
+static bool HIDAPI_DriverSimpleProfile_IsTouchpadChanged(const Uint8 *last, const Uint8 *data, bool initial, Uint8 pressure_byte_index, const SDL_HIDAPI_SimpleTouchpadBinding *touchpad)
 {
     if (initial) {
         return true;
     }
-    if (last[down_byte_index] != data[down_byte_index]) {
+    if (last[pressure_byte_index] != data[pressure_byte_index]) {
         return true;
     }
-    if (HIDAPI_DriverSimpleProfile_IsTouchpadAxisChanged(last, data, touchpad->x_high_byte_index, touchpad->x_low_byte_index)) {
+    if (HIDAPI_DriverSimpleProfile_IsTouchpadAxisChanged(last, data, touchpad->x_high_byte_index, touchpad->x_high_byte_mask, touchpad->x_low_byte_index)) {
         return true;
     }
-    return HIDAPI_DriverSimpleProfile_IsTouchpadAxisChanged(last, data, touchpad->y_high_byte_index, touchpad->y_low_byte_index);
+    return HIDAPI_DriverSimpleProfile_IsTouchpadAxisChanged(last, data, touchpad->y_high_byte_index, touchpad->y_high_byte_mask, touchpad->y_low_byte_index);
 }
 
 static float HIDAPI_DriverSimpleProfile_NormalizeTouchpadCoordinate(Uint16 value, Uint16 resolution)
@@ -512,7 +515,7 @@ static float HIDAPI_DriverSimpleProfile_NormalizeTouchpadCoordinate(Uint16 value
     return SDL_clamp(normalized, 0.0f, 1.0f);
 }
 
-static bool HIDAPI_DriverSimpleProfile_DecodeTouchpadAxis(const Uint8 *data, int size, Uint8 high_byte_index, Uint8 low_byte_index, Uint16 *out_value)
+static bool HIDAPI_DriverSimpleProfile_DecodeTouchpadAxis(const Uint8 *data, int size, Uint8 high_byte_index, Uint8 high_byte_mask, Uint8 low_byte_index, Uint16 *out_value)
 {
     Uint16 value;
 
@@ -522,7 +525,7 @@ static bool HIDAPI_DriverSimpleProfile_DecodeTouchpadAxis(const Uint8 *data, int
 
     value = data[low_byte_index];
     if (high_byte_index != SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE) {
-        value = (Uint16)((((Uint16)data[high_byte_index]) << 8) | data[low_byte_index]);
+        value = (Uint16)((((Uint16)(data[high_byte_index] & high_byte_mask)) << 8) | data[low_byte_index]);
     }
 
     *out_value = value;
@@ -541,65 +544,96 @@ static void HIDAPI_DriverSimpleProfile_HandleTouchpadPacket(SDL_Joystick *joysti
 
     for (touchpad_index = 0; touchpad_index < num_touchpads; ++touchpad_index) {
         const SDL_HIDAPI_SimpleTouchpadBinding *touchpad = &touchpads[touchpad_index];
-        Uint8 down_byte_index = touchpad->down_byte_index;
-        Uint8 down_mask = touchpad->down_mask;
-        Uint8 down_value = touchpad->down_value;
+        Uint8 pressure_byte_index = touchpad->pressure_byte_index;
+        Uint8 pressure_mask = touchpad->pressure_mask;
+        Uint8 pressure_value = touchpad->pressure_value;
         Uint8 x_high_byte_index = touchpad->x_high_byte_index;
+        Uint8 x_high_byte_mask = touchpad->x_high_byte_mask;
         Uint8 x_low_byte_index = touchpad->x_low_byte_index;
         Uint8 y_high_byte_index = touchpad->y_high_byte_index;
+        Uint8 y_high_byte_mask = touchpad->y_high_byte_mask;
         Uint8 y_low_byte_index = touchpad->y_low_byte_index;
         Uint16 x_resolution = touchpad->x_resolution;
         Uint16 y_resolution = touchpad->y_resolution;
-        bool down;
-        bool previous_down;
+        bool touch_active;
+        bool previous_touch_active;
+        bool pressure_on;
         float normalized_x;
         float normalized_y;
+        float pressure;
         Uint16 x;
         Uint16 y;
+        Uint16 previous_x = 0;
+        Uint16 previous_y = 0;
 
-        if (!HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(x_high_byte_index, x_low_byte_index) ||
-            !HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(y_high_byte_index, y_low_byte_index) ||
-            down_mask == 0 ||
-            down_value > 1 ||
+        if (!HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(x_high_byte_index, x_high_byte_mask, x_low_byte_index) ||
+            !HIDAPI_DriverSimpleProfile_IsTouchpadAxisConfigValid(y_high_byte_index, y_high_byte_mask, y_low_byte_index) ||
+            pressure_mask == 0 ||
+            pressure_value > 1 ||
             x_resolution == 0 || y_resolution == 0) {
             continue;
         }
 
-        if (down_byte_index >= size ||
+        if (pressure_byte_index >= size ||
             !HIDAPI_DriverSimpleProfile_IsTouchpadAxisBytesValid(x_high_byte_index, x_low_byte_index, size) ||
             !HIDAPI_DriverSimpleProfile_IsTouchpadAxisBytesValid(y_high_byte_index, y_low_byte_index, size)) {
             continue;
         }
-        if (!HIDAPI_DriverSimpleProfile_IsTouchpadChanged(last, data, initial, down_byte_index, touchpad)) {
+        if (!HIDAPI_DriverSimpleProfile_IsTouchpadChanged(last, data, initial, pressure_byte_index, touchpad)) {
             continue;
         }
-        if (!HIDAPI_DriverSimpleProfile_DecodeTouchpadAxis(data, size, x_high_byte_index, x_low_byte_index, &x) ||
-            !HIDAPI_DriverSimpleProfile_DecodeTouchpadAxis(data, size, y_high_byte_index, y_low_byte_index, &y)) {
+        if (!HIDAPI_DriverSimpleProfile_DecodeTouchpadAxis(data, size, x_high_byte_index, x_high_byte_mask, x_low_byte_index, &x) ||
+            !HIDAPI_DriverSimpleProfile_DecodeTouchpadAxis(data, size, y_high_byte_index, y_high_byte_mask, y_low_byte_index, &y)) {
             continue;
         }
 
-        down = (((data[down_byte_index] & down_mask) != 0) == (down_value != 0));
-        previous_down = initial ? false : ((((last[down_byte_index] & down_mask) != 0) == (down_value != 0)));
+        touch_active = (x != 0 || y != 0);
+        pressure_on = (((data[pressure_byte_index] & pressure_mask) != 0) == (pressure_value != 0));
+        pressure = pressure_on ? 1.0f : 0.0f;
         normalized_x = HIDAPI_DriverSimpleProfile_NormalizeTouchpadCoordinate(x, x_resolution);
         normalized_y = HIDAPI_DriverSimpleProfile_NormalizeTouchpadCoordinate(y, y_resolution);
 
-        /* Keep reporting coordinates even when the physical "down" bit is not set. */
-        if (!down) {
-            if (previous_down) {
-                /* Physical transition 1->0 must generate an UP event. */
+        previous_touch_active = false;
+        if (!initial &&
+            HIDAPI_DriverSimpleProfile_DecodeTouchpadAxis(last, size, x_high_byte_index, x_high_byte_mask, x_low_byte_index, &previous_x) &&
+            HIDAPI_DriverSimpleProfile_DecodeTouchpadAxis(last, size, y_high_byte_index, y_high_byte_mask, y_low_byte_index, &previous_y)) {
+            previous_touch_active = (previous_x != 0 || previous_y != 0);
+        }
+
+        if (!touch_active) {
+            if (previous_touch_active) {
+                /* XY transition from non-zero to zero means finger lifted. */
                 SDL_SendJoystickTouchpad(timestamp, joystick, touchpad_index, 0, false,
-                                         normalized_x, normalized_y, 0.0f);
-            } else {
-                SDL_SendJoystickTouchpad(timestamp, joystick, touchpad_index, 0, true,
-                                         normalized_x, normalized_y, 0.0f);
+                                         0.0f, 0.0f, 0.0f);
             }
             continue;
         }
 
-        /* In hover mode we keep the finger logically down to allow motion events. */
         SDL_SendJoystickTouchpad(timestamp, joystick, touchpad_index, 0, true,
-                                 normalized_x, normalized_y, 1.0f);
+                                 normalized_x, normalized_y, pressure);
     }
+}
+
+static void HIDAPI_DriverSimpleProfile_HandleBatteryPacket(SDL_Joystick *joystick, SDL_DriverSimpleProfile_Context *ctx, const Uint8 *data, int size, const Uint8 *last, bool initial)
+{
+    const SDL_HIDAPI_SimpleBatteryBinding *battery = ctx->profile ? ctx->profile->battery : NULL;
+    Uint8 byte_index;
+    int percent;
+
+    if (!battery) {
+        return;
+    }
+
+    byte_index = battery->byte_index;
+    if (byte_index >= size) {
+        return;
+    }
+    if (!initial && last[byte_index] == data[byte_index]) {
+        return;
+    }
+
+    percent = SDL_clamp((int)data[byte_index], 0, 100);
+    SDL_SendJoystickPowerInfo(joystick, SDL_POWERSTATE_ON_BATTERY, percent);
 }
 
 static void HIDAPI_DriverSimpleProfile_HandleStatePacket(SDL_Joystick *joystick, SDL_DriverSimpleProfile_Context *ctx, const Uint8 *data, int size)
@@ -651,6 +685,7 @@ static void HIDAPI_DriverSimpleProfile_HandleStatePacket(SDL_Joystick *joystick,
     }
 
     HIDAPI_DriverSimpleProfile_HandleTouchpadPacket(joystick, ctx, data, size, timestamp, last, initial);
+    HIDAPI_DriverSimpleProfile_HandleBatteryPacket(joystick, ctx, data, size, last, initial);
 
     SDL_zeroa(ctx->last_state);
     SDL_memcpy(ctx->last_state, data, SDL_min(size, (int)sizeof(ctx->last_state)));
