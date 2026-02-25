@@ -495,6 +495,7 @@ static const ControllerDescription_t arrControllers[] = {
 	{ MAKE_CONTROLLER_ID( 0x1bad,	0x2a0 ), k_eControllerType_XBoxOneController, NULL },	// Unknown Controller
 	{ MAKE_CONTROLLER_ID( 0x1bad,	0x5500 ), k_eControllerType_XBoxOneController, NULL },	// Unknown Controller
 	{ MAKE_CONTROLLER_ID( 0x20ab,	0x55ef ), k_eControllerType_XBoxOneController, NULL },	// Unknown Controller
+	{ MAKE_CONTROLLER_ID( 0x20bc,	0x5076 ), k_eControllerType_UnknownNonSteamController, "Beitong Zeus 2" },
 	{ MAKE_CONTROLLER_ID( 0x24c6,	0x5509 ), k_eControllerType_XBoxOneController, NULL },	// Unknown Controller
 	{ MAKE_CONTROLLER_ID( 0x2516,	0x69 ), k_eControllerType_XBoxOneController, NULL },	// Unknown Controller
 	{ MAKE_CONTROLLER_ID( 0x25b1,	0x360 ), k_eControllerType_XBoxOneController, NULL },	// Unknown Controller
