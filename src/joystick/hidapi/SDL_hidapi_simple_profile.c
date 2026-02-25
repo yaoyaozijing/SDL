@@ -294,15 +294,7 @@ static bool HIDAPI_DriverSimpleProfile_OpenJoystick(SDL_HIDAPI_Device *device, S
         SDL_PrivateJoystickAddSensor(joystick, SDL_SENSOR_GYRO, sensors->report_rate_hz);
         SDL_PrivateJoystickAddSensor(joystick, SDL_SENSOR_ACCEL, sensors->report_rate_hz);
 
-        /* Keep sensor stream active by default so test tools can read data immediately. */
-        ctx->sensors_enabled = true;
-        ctx->sensor_timestamp_ns = SDL_GetTicksNS();
-        ctx->sensor_report_counter = 0;
-        ctx->sensor_report_counter_initialized = false;
-        joystick->nsensors_enabled = joystick->nsensors;
-        for (i = 0; i < joystick->nsensors; ++i) {
-            joystick->sensors[i].enabled = true;
-        }
+        ctx->sensors_enabled = false;
     }
 
     return true;
@@ -400,11 +392,6 @@ static bool HIDAPI_DriverSimpleProfile_SetJoystickSensorsEnabled(SDL_HIDAPI_Devi
     }
 
     ctx->sensors_enabled = enabled;
-    if (enabled) {
-        ctx->sensor_timestamp_ns = SDL_GetTicksNS();
-        ctx->sensor_report_counter = 0;
-        ctx->sensor_report_counter_initialized = false;
-    }
     return true;
 }
 
