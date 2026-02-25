@@ -12,6 +12,7 @@
 
 #define LEGIONGO_MAPPING_SUFFIX "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,misc4:b23,misc5:b24,"
 #define LEGIONGOS_MAPPING_SUFFIX "misc1:b15,paddle1:b16,paddle2:b17,touchpad:b20,"
+#define SDL_HINT_JOYSTICK_HIDAPI_LEGIONGO_SENSOR_ENABLE "SDL_JOYSTICK_HIDAPI_LEGIONGO_SENSOR_ENABLE"
 
 static const SDL_HIDAPI_SimpleAxisBinding LegionGo_layout_axes[] = {
     { SDL_GAMEPAD_AXIS_LEFTX,         12, SDL_HIDAPI_AXIS_ENCODING_STICK_8BIT_CENTER_0x80, false },
@@ -60,6 +61,18 @@ static const SDL_HIDAPI_SimpleTouchpadBinding LegionGo_touchpads[] = {
     ),
 };
 
+static const Uint8 LegionGo_enable_sensor_packet_1[] = {
+    0x05, 0x06, 0x6A, 0x02, 0x04, 0x01, 0x01
+};
+static const Uint8 LegionGo_enable_sensor_packet_2[] = {
+    0x05, 0x06, 0x6A, 0x02, 0x04, 0x02, 0x01
+};
+
+static const SDL_HIDAPI_SimpleOutputBinding LegionGo_enable_sensor_packets[] = {
+    { LegionGo_enable_sensor_packet_1, (Uint8)SDL_arraysize(LegionGo_enable_sensor_packet_1) },
+    { LegionGo_enable_sensor_packet_2, (Uint8)SDL_arraysize(LegionGo_enable_sensor_packet_2) },
+};
+
 static const SDL_HIDAPI_SimpleSensorBinding LegionGo_sensor = {
     0,
     54, /* gyro x */
@@ -72,6 +85,11 @@ static const SDL_HIDAPI_SimpleSensorBinding LegionGo_sensor = {
     500.0f,
     (2.0f * SDL_STANDARD_GRAVITY) / 32768.0f,
     ((float)(SDL_PI_F / 180.0f)) / 16.0f,
+    0,
+    0,
+    LegionGo_enable_sensor_packets,
+    (int)SDL_arraysize(LegionGo_enable_sensor_packets),
+    SDL_HINT_JOYSTICK_HIDAPI_LEGIONGO_SENSOR_ENABLE,
 };
 
 static const SDL_HIDAPI_SimpleReportLayout LegionGo_layout = {

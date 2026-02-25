@@ -58,6 +58,12 @@ typedef struct
 
 typedef struct
 {
+    const Uint8 *packet_data;
+    Uint8 packet_size;
+} SDL_HIDAPI_SimpleOutputBinding;
+
+typedef struct
+{
     Uint8 byte_index;
 } SDL_HIDAPI_SimpleBatteryBinding;
 
@@ -79,6 +85,9 @@ typedef struct
     float gyro_scale;
     Uint8 accel_invert_axes;    /* SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_* */
     Uint8 gyro_invert_axes;     /* SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_* */
+    const SDL_HIDAPI_SimpleOutputBinding *sensor_enable_packets;
+    int num_sensor_enable_packets;
+    const char *sensor_enable_hint;
 } SDL_HIDAPI_SimpleSensorBinding;
 
 #define SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE 0xFF

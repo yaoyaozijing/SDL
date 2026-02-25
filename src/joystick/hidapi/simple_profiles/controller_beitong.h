@@ -52,7 +52,7 @@ static const SDL_HIDAPI_SimpleSensorBinding Beitong_Zeus2_sensor = {
     SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_BYTE_NONE,
     500.0f,
     (2.0f * SDL_STANDARD_GRAVITY) / 32768.0f,
-    ((float)(SDL_PI_F / 180.0f)) / 16.0f,
+    (2000.0f * (float)(SDL_PI_F / 180.0f)) / 32768.0f,
     SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_Y,
     SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_Y,
 };

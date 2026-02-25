@@ -38,6 +38,15 @@
 #define SDL_HINT_JOYSTICK_HIDAPI_SIMPLE_PROFILE "SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE"
 #endif
 
+#define HIDAPI_SIMPLE_PROFILE_MAX_SENSOR_CONFIG_PACKETS 8
+#define HIDAPI_SIMPLE_PROFILE_MAX_SENSOR_CONFIG_PACKET_SIZE USB_PACKET_LENGTH
+
+typedef struct
+{
+    Uint8 data[HIDAPI_SIMPLE_PROFILE_MAX_SENSOR_CONFIG_PACKET_SIZE];
+    int size;
+} SDL_DriverSimpleProfile_ConfigPacket;
+
 typedef struct
 {
     const SDL_HIDAPI_SimpleDeviceProfile *profile;
@@ -382,6 +391,159 @@ static bool HIDAPI_DriverSimpleProfile_SendJoystickEffect(SDL_HIDAPI_Device *dev
     return SDL_Unsupported();
 }
 
+static bool HIDAPI_DriverSimpleProfile_SendOutputPacket(SDL_HIDAPI_Device *device, const Uint8 *packet_data, int packet_size)
+{
+    if (!packet_data || packet_size <= 0 || packet_size > (2 * USB_PACKET_LENGTH)) {
+        return SDL_Unsupported();
+    }
+
+    if (SDL_HIDAPI_SendRumble(device, packet_data, packet_size) != packet_size) {
+        return SDL_SetError("Couldn't send output packet");
+    }
+    return true;
+}
+
+static bool HIDAPI_DriverSimpleProfile_SendOutputPackets(SDL_HIDAPI_Device *device, const SDL_HIDAPI_SimpleOutputBinding *packets, int num_packets)
+{
+    int i;
+
+    if (!packets || num_packets <= 0) {
+        return true;
+    }
+
+    for (i = 0; i < num_packets; ++i) {
+        const SDL_HIDAPI_SimpleOutputBinding *packet = &packets[i];
+
+        if (!HIDAPI_DriverSimpleProfile_SendOutputPacket(device, packet->packet_data, packet->packet_size)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool HIDAPI_DriverSimpleProfile_ParseOutputPacketHint(const char *hint, SDL_DriverSimpleProfile_ConfigPacket *packets, int max_packets, int *num_packets)
+{
+    const char *ptr = hint;
+    int packet_index = 0;
+    int packet_size = 0;
+
+    if (!hint || !*hint || !packets || max_packets <= 0 || !num_packets) {
+        return false;
+    }
+
+    SDL_memset(packets, 0, sizeof(*packets) * max_packets);
+    *num_packets = 0;
+
+    while (*ptr) {
+        char token[16];
+        char *endptr = NULL;
+        unsigned long value;
+        int token_length = 0;
+
+        while (*ptr && (SDL_isspace((unsigned char)*ptr) || *ptr == ',' || *ptr == '[' || *ptr == ']' || *ptr == '(' || *ptr == ')')) {
+            ++ptr;
+        }
+        if (!*ptr) {
+            break;
+        }
+
+        if (*ptr == ';' || *ptr == '|') {
+            if (packet_size > 0) {
+                if (packet_index >= max_packets) {
+                    return false;
+                }
+                packets[packet_index].size = packet_size;
+                ++packet_index;
+                packet_size = 0;
+            }
+            ++ptr;
+            continue;
+        }
+
+        while (ptr[token_length] &&
+               !SDL_isspace((unsigned char)ptr[token_length]) &&
+               ptr[token_length] != ',' &&
+               ptr[token_length] != ';' &&
+               ptr[token_length] != '|' &&
+               ptr[token_length] != '[' &&
+               ptr[token_length] != ']' &&
+               ptr[token_length] != '(' &&
+               ptr[token_length] != ')') {
+            ++token_length;
+        }
+        if (token_length <= 0 || token_length >= (int)sizeof(token)) {
+            return false;
+        }
+
+        SDL_memcpy(token, ptr, token_length);
+        token[token_length] = '\0';
+
+        if (SDL_strcasecmp(token, "bytes") == 0 || SDL_strcasecmp(token, "bytearray") == 0) {
+            ptr += token_length;
+            continue;
+        }
+
+        value = SDL_strtoul(token, &endptr, 16);
+        if (!endptr || endptr == token || *endptr != '\0' || value > 0xFFUL) {
+            return false;
+        }
+
+        if (packet_index >= max_packets || packet_size >= HIDAPI_SIMPLE_PROFILE_MAX_SENSOR_CONFIG_PACKET_SIZE) {
+            return false;
+        }
+        packets[packet_index].data[packet_size++] = (Uint8)value;
+        ptr += token_length;
+    }
+
+    if (packet_size > 0) {
+        if (packet_index >= max_packets) {
+            return false;
+        }
+        packets[packet_index].size = packet_size;
+        ++packet_index;
+    }
+
+    *num_packets = packet_index;
+    return (packet_index > 0);
+}
+
+static bool HIDAPI_DriverSimpleProfile_SendConfiguredSensorEnablePackets(SDL_HIDAPI_Device *device, const SDL_HIDAPI_SimpleSensorBinding *sensors)
+{
+    const SDL_HIDAPI_SimpleOutputBinding *sensor_enable_packets;
+    int num_sensor_enable_packets;
+    const char *sensor_enable_hint;
+    const char *hint_value = NULL;
+    int i;
+
+    if (!sensors) {
+        return true;
+    }
+
+    sensor_enable_packets = sensors->sensor_enable_packets;
+    num_sensor_enable_packets = sensors->num_sensor_enable_packets;
+    sensor_enable_hint = sensors->sensor_enable_hint;
+
+    if (sensor_enable_hint) {
+        hint_value = SDL_GetHint(sensor_enable_hint);
+    }
+    if (hint_value && *hint_value) {
+        SDL_DriverSimpleProfile_ConfigPacket configured_packets[HIDAPI_SIMPLE_PROFILE_MAX_SENSOR_CONFIG_PACKETS];
+        int num_configured_packets = 0;
+
+        if (!HIDAPI_DriverSimpleProfile_ParseOutputPacketHint(hint_value, configured_packets, (int)SDL_arraysize(configured_packets), &num_configured_packets)) {
+            return SDL_SetError("Invalid packet bytes in hint '%s'", sensor_enable_hint);
+        }
+        for (i = 0; i < num_configured_packets; ++i) {
+            if (!HIDAPI_DriverSimpleProfile_SendOutputPacket(device, configured_packets[i].data, configured_packets[i].size)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    return HIDAPI_DriverSimpleProfile_SendOutputPackets(device, sensor_enable_packets, num_sensor_enable_packets);
+}
+
 static bool HIDAPI_DriverSimpleProfile_SetJoystickSensorsEnabled(SDL_HIDAPI_Device *device, SDL_Joystick *joystick, bool enabled)
 {
     SDL_DriverSimpleProfile_Context *ctx = (SDL_DriverSimpleProfile_Context *)device->context;
@@ -389,6 +551,14 @@ static bool HIDAPI_DriverSimpleProfile_SetJoystickSensorsEnabled(SDL_HIDAPI_Devi
 
     if (!sensors) {
         return SDL_Unsupported();
+    }
+
+    if (enabled && !ctx->sensors_enabled) {
+        if (!HIDAPI_DriverSimpleProfile_SendConfiguredSensorEnablePackets(device, sensors)) {
+            return false;
+        }
+        ctx->sensor_timestamp_ns = 0;
+        ctx->sensor_report_counter_initialized = false;
     }
 
     ctx->sensors_enabled = enabled;
