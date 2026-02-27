@@ -85,6 +85,9 @@ static SDL_HIDAPI_DeviceDriver *SDL_HIDAPI_drivers[] = {
 #ifdef SDL_JOYSTICK_HIDAPI_WII
     &SDL_HIDAPI_DriverWii,
 #endif
+#ifdef SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE
+    &SDL_HIDAPI_DriverSimpleProfile,
+#endif
 #ifdef SDL_JOYSTICK_HIDAPI_XBOX360
     &SDL_HIDAPI_DriverXbox360,
     &SDL_HIDAPI_DriverXbox360W,
@@ -109,9 +112,6 @@ static SDL_HIDAPI_DeviceDriver *SDL_HIDAPI_drivers[] = {
 #endif
 #ifdef SDL_JOYSTICK_HIDAPI_GAMESIR
     &SDL_HIDAPI_DriverGameSir,
-#endif
-#ifdef SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE
-    &SDL_HIDAPI_DriverSimpleProfile,
 #endif
 #ifdef SDL_JOYSTICK_HIDAPI_ZUIKI
     &SDL_HIDAPI_DriverZUIKI,
@@ -171,6 +171,23 @@ void HIDAPI_DumpPacket(const char *prefix, const Uint8 *data, int size)
 static bool HIDAPI_IsSimpleProfiledDevice(Uint16 vendor, Uint16 product)
 {
     return HIDAPI_Simple_IsSupportedVIDPID(vendor, product);
+}
+
+static SDL_HIDAPI_DeviceDriver *HIDAPI_GetSimpleProfileDriver(void)
+{
+    int i;
+
+    for (i = 0; i < SDL_arraysize(SDL_HIDAPI_drivers); ++i) {
+        SDL_HIDAPI_DeviceDriver *driver = SDL_HIDAPI_drivers[i];
+#ifdef SDL_JOYSTICK_HIDAPI_SIMPLE_PROFILE
+        if (driver == &SDL_HIDAPI_DriverSimpleProfile) {
+            return driver;
+        }
+#else
+        (void)driver;
+#endif
+    }
+    return NULL;
 }
 
 bool HIDAPI_SupportsPlaystationDetection(Uint16 vendor, Uint16 product)
@@ -266,6 +283,10 @@ static SDL_GamepadType SDL_GetJoystickGameControllerProtocol(const char *name, U
 
     SDL_GamepadType type = SDL_GAMEPAD_TYPE_STANDARD;
 
+    if (HIDAPI_Simple_ShouldBlockXbox360Driver(vendor, product)) {
+        return SDL_GAMEPAD_TYPE_SIMPLEPROFILE;
+    }
+
     // This code should match the checks in libusb/hid.c and HIDDeviceManager.java
     if (interface_class == LIBUSB_CLASS_VENDOR_SPEC &&
         interface_subclass == XB360_IFACE_SUBCLASS &&
@@ -355,6 +376,19 @@ static bool HIDAPI_IsDeviceSupported(Uint16 vendor_id, Uint16 product_id, Uint16
 {
     int i;
     SDL_GamepadType type = SDL_GetJoystickGameControllerProtocol(name, vendor_id, product_id, -1, 0, 0, 0);
+    bool is_simple_profiled = HIDAPI_IsSimpleProfiledDevice(vendor_id, product_id);
+
+    if (is_simple_profiled) {
+        SDL_HIDAPI_DeviceDriver *simple_driver = HIDAPI_GetSimpleProfileDriver();
+        if (simple_driver &&
+            simple_driver->enabled &&
+            simple_driver->IsSupportedDevice(NULL, name, type, vendor_id, product_id, version, -1, 0, 0, 0)) {
+            return true;
+        }
+        if (HIDAPI_Simple_ShouldBlockXbox360Driver(vendor_id, product_id)) {
+            return false;
+        }
+    }
 
     for (i = 0; i < SDL_arraysize(SDL_HIDAPI_drivers); ++i) {
         SDL_HIDAPI_DeviceDriver *driver = SDL_HIDAPI_drivers[i];
@@ -372,6 +406,7 @@ static SDL_HIDAPI_DeviceDriver *HIDAPI_GetDeviceDriver(SDL_HIDAPI_Device *device
     const Uint16 USAGE_GAMEPAD = 0x0005;
     const Uint16 USAGE_MULTIAXISCONTROLLER = 0x0008;
     int i;
+    bool is_simple_profiled;
 
     if (device->num_children > 0) {
         return &SDL_HIDAPI_DriverCombined;
@@ -381,10 +416,24 @@ static SDL_HIDAPI_DeviceDriver *HIDAPI_GetDeviceDriver(SDL_HIDAPI_Device *device
         return NULL;
     }
 
+    is_simple_profiled = HIDAPI_IsSimpleProfiledDevice(device->vendor_id, device->product_id);
+
+    if (is_simple_profiled) {
+        SDL_HIDAPI_DeviceDriver *simple_driver = HIDAPI_GetSimpleProfileDriver();
+        if (simple_driver &&
+            simple_driver->enabled &&
+            simple_driver->IsSupportedDevice(device, device->name, device->type, device->vendor_id, device->product_id, device->version, device->interface_number, device->interface_class, device->interface_subclass, device->interface_protocol)) {
+            return simple_driver;
+        }
+        if (HIDAPI_Simple_ShouldBlockXbox360Driver(device->vendor_id, device->product_id)) {
+            return NULL;
+        }
+    }
+
     if (device->vendor_id != USB_VENDOR_VALVE &&
         device->vendor_id != USB_VENDOR_FLYDIGI_V1 &&
         device->vendor_id != USB_VENDOR_FLYDIGI_V2 &&
-        !HIDAPI_IsSimpleProfiledDevice(device->vendor_id, device->product_id)) {
+        !is_simple_profiled) {
         if (device->usage_page && device->usage_page != USAGE_PAGE_GENERIC_DESKTOP) {
             return NULL;
         }
@@ -1124,6 +1173,7 @@ static void HIDAPI_UpdateDeviceList(void)
 {
     SDL_HIDAPI_Device *device;
     struct SDL_hid_device_info *devs, *info;
+    bool removed;
 
     SDL_LockJoysticks();
 
@@ -1158,6 +1208,14 @@ static void HIDAPI_UpdateDeviceList(void)
                 }
             }
             SDL_hid_free_enumeration(devs);
+        }
+    }
+
+    removed = false;
+    for (device = SDL_HIDAPI_devices; device; device = device->next) {
+        HIDAPI_SetupDeviceDriver(device, &removed);
+        if (removed) {
+            break;
         }
     }
 

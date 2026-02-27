@@ -5,16 +5,14 @@ typedef struct
 {
     Uint16 vendor_id;
     Uint16 product_id;
+    int interface_number; /* required HID interface (MI) number */
     int collection;
     const char *name;
     const char *mapping_string_suffix;
     const SDL_HIDAPI_SimpleReportLayout *layout;
     const SDL_HIDAPI_SimpleRumbleBinding *rumble;
-    const SDL_HIDAPI_SimpleTriggerRumbleBinding *trigger_rumble;
-    const SDL_HIDAPI_SimpleTouchpadBinding *touchpads;
-    int num_touchpads;
-    const SDL_HIDAPI_SimpleBatteryBinding *battery;
     const SDL_HIDAPI_SimpleSensorBinding *sensors;
+    bool block_xbox360_driver; /* if true, don't fall through to Xbox 360 HIDAPI drivers when simple profile doesn't claim */
 } SDL_HIDAPI_SimpleDeviceProfile;
 
 #include "controller_beitong.h"

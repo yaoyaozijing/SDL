@@ -1,15 +1,6 @@
 #ifndef SDL_hidapi_simple_profile_controller_legiongo_h_
 #define SDL_hidapi_simple_profile_controller_legiongo_h_
 
-#define USB_VENDOR_LENOVO 0x17ef
-
-#define USB_PRODUCT_LEGIONGO_XINPUT 0x61eb
-#define USB_PRODUCT_LEGIONGO_DINPUT 0x61ec
-
-#define USB_VENDOR_LEGIONGOS 0x1a86
-#define USB_PRODUCT_LEGIONGOS_XINPUT 0xe310
-#define USB_PRODUCT_LEGIONGOS_DINPUT 0xe311
-
 #define LEGIONGO_MAPPING_SUFFIX "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,misc4:b23,misc5:b24,"
 #define LEGIONGOS_MAPPING_SUFFIX "misc1:b15,paddle1:b16,paddle2:b17,touchpad:b20,"
 #define SDL_HINT_JOYSTICK_HIDAPI_LEGIONGO_SENSOR_ENABLE "SDL_JOYSTICK_HIDAPI_LEGIONGO_SENSOR_ENABLE"
@@ -74,7 +65,8 @@ static const SDL_HIDAPI_SimpleOutputBinding LegionGo_enable_sensor_packets[] = {
 };
 
 static const SDL_HIDAPI_SimpleSensorBinding LegionGo_sensor = {
-    0,
+    1,  /* MI: primary input stream */
+    0,  /* COL: primary input stream */
     54, /* gyro x */
     56, /* gyro y */
     52, /* gyro z */
@@ -96,6 +88,8 @@ static const SDL_HIDAPI_SimpleReportLayout LegionGo_layout = {
     { 16, 0x08, 0x04, 0x02, 0x01 },
     LegionGo_layout_buttons, (int)SDL_arraysize(LegionGo_layout_buttons),
     LegionGo_layout_axes, (int)SDL_arraysize(LegionGo_layout_axes),
+    LegionGo_touchpads, (int)SDL_arraysize(LegionGo_touchpads),
+    NULL,
 };
 
 static const SDL_HIDAPI_SimpleAxisBinding LegionGoS_layout_axes[] = {
@@ -141,12 +135,14 @@ static const SDL_HIDAPI_SimpleReportLayout LegionGoS_layout = {
     { 0, 0x10, 0x20, 0x40, 0x80 },
     LegionGoS_layout_buttons, (int)SDL_arraysize(LegionGoS_layout_buttons),
     LegionGoS_layout_axes, (int)SDL_arraysize(LegionGoS_layout_axes),
+    LegionGoS_touchpads, (int)SDL_arraysize(LegionGoS_touchpads),
+    NULL,
 };
 
 #define SDL_HIDAPI_SIMPLE_PROFILE_CONTROLLER_ENTRIES_LEGIONGO \
-    { USB_VENDOR_LENOVO, USB_PRODUCT_LEGIONGO_XINPUT, 0, "Lenovo Legion Go", LEGIONGO_MAPPING_SUFFIX, &LegionGo_layout, NULL, NULL, LegionGo_touchpads, 1, NULL, &LegionGo_sensor }, \
-    { USB_VENDOR_LENOVO, USB_PRODUCT_LEGIONGO_DINPUT, 0, "Lenovo Legion Go", LEGIONGO_MAPPING_SUFFIX, &LegionGo_layout, NULL, NULL, LegionGo_touchpads, 1, NULL, &LegionGo_sensor }, \
-    { USB_VENDOR_LEGIONGOS, USB_PRODUCT_LEGIONGOS_XINPUT, 0, "Lenovo Legion Go S", LEGIONGOS_MAPPING_SUFFIX, &LegionGoS_layout, NULL, NULL, LegionGoS_touchpads, 1, NULL, NULL }, \
-    { USB_VENDOR_LEGIONGOS, USB_PRODUCT_LEGIONGOS_DINPUT, 0, "Lenovo Legion Go S", LEGIONGOS_MAPPING_SUFFIX, &LegionGoS_layout, NULL, NULL, LegionGoS_touchpads, 1, NULL, NULL },
+    { 0x17ef, 0x61eb, 1, 0, "Lenovo Legion Go XINPUT", LEGIONGO_MAPPING_SUFFIX, &LegionGo_layout, NULL, &LegionGo_sensor, false }, \
+    { 0x17ef, 0x61ec, 1, 0, "Lenovo Legion Go DINPUT", LEGIONGO_MAPPING_SUFFIX, &LegionGo_layout, NULL, &LegionGo_sensor, false }, \
+    { 0x1a86, 0xe310, 1, 0, "Lenovo Legion Go S XINPUT", LEGIONGOS_MAPPING_SUFFIX, &LegionGoS_layout, NULL, NULL, false }, \
+    { 0x1a86, 0xe311, 1, 0, "Lenovo Legion Go S DINPUT", LEGIONGOS_MAPPING_SUFFIX, &LegionGoS_layout, NULL, NULL, false },
 
 #endif

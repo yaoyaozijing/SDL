@@ -33,34 +33,23 @@ typedef struct
 
 typedef struct
 {
-    SDL_HIDAPI_SimpleDPadBinding dpad;
-    const SDL_HIDAPI_SimpleButtonBinding *buttons;
-    int num_buttons;
-    const SDL_HIDAPI_SimpleAxisBinding *axes;
-    int num_axes;
-} SDL_HIDAPI_SimpleReportLayout;
+    Uint8 pressure_byte_index;
+    Uint8 pressure_mask;
+    Uint8 pressure_value;   // 1 or 0 depending on whether pressure-on is indicated by a bit being set or clear
+    Uint8 x_high_byte_index;
+    Uint8 x_high_byte_mask; // masked before packing into high 8 bits
+    Uint8 x_low_byte_index;
+    Uint8 y_high_byte_index;
+    Uint8 y_high_byte_mask; // masked before packing into high 8 bits
+    Uint8 y_low_byte_index;
+    Uint16 x_resolution;
+    Uint16 y_resolution;
+} SDL_HIDAPI_SimpleTouchpadBinding;
 
-typedef struct
-{
-    const Uint8 *packet_data;
-    Uint8 packet_size;
-    Uint8 low_frequency_byte_index;
-    Uint8 high_frequency_byte_index;
-} SDL_HIDAPI_SimpleRumbleBinding;
+#define SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE 0xFF
 
-typedef struct
-{
-    const Uint8 *packet_data;
-    Uint8 packet_size;
-    Uint8 left_trigger_byte_index;
-    Uint8 right_trigger_byte_index;
-} SDL_HIDAPI_SimpleTriggerRumbleBinding;
-
-typedef struct
-{
-    const Uint8 *packet_data;
-    Uint8 packet_size;
-} SDL_HIDAPI_SimpleOutputBinding;
+#define SDL_HIDAPI_SIMPLE_TOUCHPAD_BINDING(pressure_byte, pressure_mask, pressure_value, x_high, x_high_mask, x_low, y_high, y_high_mask, y_low, x_res, y_res) \
+    { (pressure_byte), (pressure_mask), (pressure_value), (x_high), (x_high_mask), (x_low), (y_high), (y_high_mask), (y_low), (x_res), (y_res) }
 
 typedef struct
 {
@@ -72,7 +61,39 @@ typedef struct
 
 typedef struct
 {
-    int collection;
+    SDL_HIDAPI_SimpleDPadBinding dpad;
+    const SDL_HIDAPI_SimpleButtonBinding *buttons;
+    int num_buttons;
+    const SDL_HIDAPI_SimpleAxisBinding *axes;
+    int num_axes;
+    const SDL_HIDAPI_SimpleTouchpadBinding *touchpads;
+    int num_touchpads;
+    const SDL_HIDAPI_SimpleBatteryBinding *battery;
+} SDL_HIDAPI_SimpleReportLayout;
+
+typedef struct
+{
+    const Uint8 *packet_data;
+    Uint8 packet_size;
+    Uint8 low_frequency_byte_index;
+    Uint8 high_frequency_byte_index;
+    const Uint8 *trigger_packet_data; /* optional trigger rumble packet; NULL means trigger rumble is unsupported */
+    Uint8 trigger_packet_size;
+    Uint8 left_trigger_byte_index;
+    Uint8 right_trigger_byte_index;
+    int xinput_rumble_mode;     /* 0=use HID rumble, 1/2=use XInput rumble only (1=match same VID/PID, 2=match fixed XInput VID/PID 0x045E/0x028E) */
+} SDL_HIDAPI_SimpleRumbleBinding;
+
+typedef struct
+{
+    const Uint8 *packet_data;
+    Uint8 packet_size;
+} SDL_HIDAPI_SimpleOutputBinding;
+
+typedef struct
+{
+    int interface_number; /* required sensor input interface (MI) */
+    int collection;       /* required sensor input collection (COL) */
     Uint8 gyro_x_byte_index;
     Uint8 gyro_y_byte_index;
     Uint8 gyro_z_byte_index;
@@ -95,30 +116,11 @@ typedef struct
 #define SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_Y 0x02
 #define SDL_HIDAPI_SIMPLE_PROFILE_SENSOR_AXIS_Z 0x04
 
-typedef struct
-{
-    Uint8 pressure_byte_index;
-    Uint8 pressure_mask;
-    Uint8 pressure_value;   // 1 or 0 depending on whether pressure-on is indicated by a bit being set or clear
-    Uint8 x_high_byte_index;
-    Uint8 x_high_byte_mask; // masked before packing into high 8 bits
-    Uint8 x_low_byte_index;
-    Uint8 y_high_byte_index;
-    Uint8 y_high_byte_mask; // masked before packing into high 8 bits
-    Uint8 y_low_byte_index;
-    Uint16 x_resolution;
-    Uint16 y_resolution;
-} SDL_HIDAPI_SimpleTouchpadBinding;
-
-#define SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE 0xFF
-
-#define SDL_HIDAPI_SIMPLE_TOUCHPAD_BINDING(pressure_byte, pressure_mask, pressure_value, x_high, x_high_mask, x_low, y_high, y_high_mask, y_low, x_res, y_res) \
-    { (pressure_byte), (pressure_mask), (pressure_value), (x_high), (x_high_mask), (x_low), (y_high), (y_high_mask), (y_low), (x_res), (y_res) }
-
 #include "simple_profiles/controllers.h"
 
 extern const SDL_HIDAPI_SimpleDeviceProfile *HIDAPI_Simple_GetDeviceProfile(Uint16 vendor_id, Uint16 product_id);
 extern bool HIDAPI_Simple_IsSupportedVIDPID(Uint16 vendor_id, Uint16 product_id);
+extern bool HIDAPI_Simple_ShouldBlockXbox360Driver(Uint16 vendor_id, Uint16 product_id);
 extern const char *HIDAPI_Simple_GetMappingStringSuffix(Uint16 vendor_id, Uint16 product_id);
 
 #endif

@@ -1,15 +1,6 @@
 #ifndef SDL_hidapi_simple_profile_controller_zhidong_h_
 #define SDL_hidapi_simple_profile_controller_zhidong_h_
 
-#define USB_VENDOR_ZHIDONG_USB_XINPUT 0x11c0
-#define USB_VENDOR_ZHIDONG_USB_DINPUT 0x1949
-#define USB_VENDOR_ZHIDONG_24G 0x2345
-
-#define USB_PRODUCT_ZHIDONG_USB_XINPUT 0x5505
-#define USB_PRODUCT_ZHIDONG_USB_DINPUT 0x00c1
-#define USB_PRODUCT_ZHIDONG_24G_XINPUT 0xe023
-#define USB_PRODUCT_ZHIDONG_24G_DINPUT 0xe024
-
 #define ZHIDONG_MAPPING_SUFFIX "misc1:b15,paddle1:b16,paddle2:b17,paddle3:b18,paddle4:b19,misc2:b21,misc3:b22,"
 
 static const SDL_HIDAPI_SimpleButtonBinding Zhidong_S_layout_buttons[] = {
@@ -48,27 +39,32 @@ static const SDL_HIDAPI_SimpleReportLayout Zhidong_S_layout = {
     { 4, 0x40, 0x80, 0x10, 0x20 },
     Zhidong_S_layout_buttons, (int)SDL_arraysize(Zhidong_S_layout_buttons),
     Zhidong_S_layout_axes, (int)SDL_arraysize(Zhidong_S_layout_axes),
+    NULL, 0,
+    NULL,
 };
 
-static const SDL_HIDAPI_SimpleTouchpadBinding Zhidong_S_touchpads[] = {
-    SDL_HIDAPI_SIMPLE_TOUCHPAD_BINDING(
-        3, 0x40, 1,
-        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 0xFF, 6,
-        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 0xFF, 7,
-        255, 255
-    ),
-    SDL_HIDAPI_SIMPLE_TOUCHPAD_BINDING(
-        4, 0x02, 1,
-        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 0xFF, 8,
-        SDL_HIDAPI_SIMPLE_PROFILE_TOUCH_BYTE_NONE, 0xFF, 9,
-        255, 255
-    ),
+static const Uint8 Zhidong_S_rumble_packet[] = { 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+static const SDL_HIDAPI_SimpleRumbleBinding Zhidong_S_rumble = {
+    Zhidong_S_rumble_packet,
+    (Uint8)SDL_arraysize(Zhidong_S_rumble_packet),
+    3,                                              /* low frequency motor */
+    4,                                              /* high frequency motor */
+    NULL,                                           /* no trigger rumble packet */
+    0,
+    0,
+    0,
+#if defined(SDL_PLATFORM_WIN32)
+    1,
+#else
+    0,
+#endif
 };
 
 #define SDL_HIDAPI_SIMPLE_PROFILE_CONTROLLER_ENTRIES_ZHIDONG \
-    { USB_VENDOR_ZHIDONG_USB_XINPUT, USB_PRODUCT_ZHIDONG_USB_XINPUT, 2, "Zhidong Controller", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, NULL, NULL, Zhidong_S_touchpads, 2, NULL, NULL }, \
-    { USB_VENDOR_ZHIDONG_USB_DINPUT, USB_PRODUCT_ZHIDONG_USB_DINPUT, 2, "Zhidong Controller", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, NULL, NULL, NULL, 0, NULL, NULL }, \
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_XINPUT, 2, "Zhidong Controller", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, NULL, NULL, NULL, 0, NULL, NULL }, \
-    { USB_VENDOR_ZHIDONG_24G, USB_PRODUCT_ZHIDONG_24G_DINPUT, 2, "Zhidong Controller", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, NULL, NULL, NULL, 0, NULL, NULL },
+    { 0x11c0, 0x5505, 1, 2, "Zhidong O+ USB XINPUT", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, &Zhidong_S_rumble, NULL, false }, \
+    { 0x1949, 0x00c1, 1, 2, "Zhidong O+ USB DINPUT", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, NULL, NULL, false }, \
+    { 0x2345, 0xe023, 1, 2, "Zhidong O+ 2.4G XINPUT", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, &Zhidong_S_rumble, NULL, false }, \
+    { 0x2345, 0xe024, 1, 2, "Zhidong O+ 2.4G DINPUT", ZHIDONG_MAPPING_SUFFIX, &Zhidong_S_layout, NULL, NULL, false },
 
 #endif
